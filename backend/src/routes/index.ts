@@ -6,6 +6,7 @@
 
 import { Router } from "express";
 import marketsRoutes from "./markets.routes";
+import productsRoutes from "./products.routes";
 import usersRoutes from "./users.routes";
 
 const routes = Router();
@@ -30,5 +31,6 @@ routes.get("/health", (_request, response) => {
 
 routes.use("/users", usersRoutes);
 routes.use("/markets", marketsRoutes);
+routes.use("/products", productsRoutes);
 
 export default routes;
