@@ -1,0 +1,38 @@
+/**
+ * MarketsRepository
+ *
+ * Handles all database operations related to markets.
+ * This repository is the only place in this module that should talk directly to Prisma.
+ */
+
+import { Market } from "../../../../generated/prisma/client";
+import { prisma } from "../../../shared/infra/prisma";
+import { CreateMarketDTO } from "../dtos/create-market.dto";
+
+export class MarketsRepository {
+  async create(data: CreateMarketDTO): Promise<Market> {
+    return prisma.market.create({
+      data,
+    });
+  }
+
+  async findById(id: string): Promise<Market | null> {
+    return prisma.market.findUnique({
+      where: { id },
+    });
+  }
+
+  async findByCnpj(cnpj: string): Promise<Market | null> {
+    return prisma.market.findUnique({
+      where: { cnpj },
+    });
+  }
+
+  async findMany(): Promise<Market[]> {
+    return prisma.market.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  }
+}
