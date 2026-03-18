@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  receipts      Receipt[]
+  shoppingLists ShoppingList[]
+
+  @@map("users")
+}
+
+model Market {
+  id            String        @id @default(uuid())
+  name          String
+  cnpj          String?       @unique
+  address       String?
+  city          String?
+  state         String?
+  zipCode       String?
+  latitude      Float?
+  longitude     Float?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  receipts      Receipt[]
+  priceRecords  PriceRecord[]
+
+  @@index([name])
+  @@index([city, state])
+  @@map("markets")
+}
+
+model Receipt {
+  id            String        @id @default(uuid())
+  userId        String
+  marketId      String
+  externalCode  String?       @unique
+  sourceType    ReceiptSource @default(MANUAL)
+  totalAmount   Float
+  purchasedAt   DateTime
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  market        Market        @relation(fields: [marketId], references: [id], onDelete: Restrict)
+  items         ReceiptItem[]
+
+  @@index([userId])
+  @@index([marketId])
+  @@index([purchasedAt])
+  @@map("receipts")
+}
+
+model ReceiptItem {
+  id            String        @id @default(uuid())
+  receiptId      String
+  productId      String?
+  nameRaw        String
+  unit           String?
+  quantity       Float?
+  unitPrice      Float
+  totalPrice     Float?
+  createdAt      DateTime     @default(now())
+
+  receipt        Receipt      @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  product        Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+  priceRecords   PriceRecord[]
+
+  @@index([receiptId])
+  @@index([productId])
+  @@index([nameRaw])
+  @@map("receipt_items")
+}
+
+model Product {
+  id                String             @id @default(uuid())
+  name              String
+  normalizedName    String             @unique
+  brand             String?
+  category          String?
+  unit              String?
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  receiptItems      ReceiptItem[]
+  priceRecords      PriceRecord[]
+  shoppingListItems ShoppingListItem[]
+
+  @@index([name])
+  @@index([normalizedName])
+  @@index([category])
+  @@map("products")
+}
+
+model PriceRecord {
+  id             String       @id @default(uuid())
+  productId       String
+  marketId        String
+  receiptItemId   String?
+  price           Float
+  observedAt      DateTime
+  createdAt       DateTime    @default(now())
+
+  product         Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  market          Market      @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  receiptItem     ReceiptItem? @relation(fields: [receiptItemId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([marketId])
+  @@index([observedAt])
+  @@index([productId, marketId, observedAt])
+  @@map("price_records")
+}
+
+model ShoppingList {
+  id            String             @id @default(uuid())
+  userId        String
+  name          String
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items         ShoppingListItem[]
+
+  @@index([userId])
+  @@map("shopping_lists")
+}
+
+model ShoppingListItem {
+  id             String         @id @default(uuid())
+  shoppingListId String
+  productId      String?
+  name           String
+  quantity       Float?
+  unit           String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  shoppingList   ShoppingList   @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  product        Product?       @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([shoppingListId])
+  @@index([productId])
+  @@index([name])
+  @@map("shopping_list_items")
+}
+
+enum ReceiptSource {
+  MANUAL
+  QR_CODE
+  IMPORTED
+}
