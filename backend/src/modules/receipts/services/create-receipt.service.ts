@@ -9,15 +9,21 @@
  * - find or create the market
  * - create the receipt
  * - create receipt items
- * - create price records for each item
+ * - create price records for each matched item
  *
- * This service is a key part of the MVP because receipts are the main source
- * of real-world grocery price data in ShopWise.
+ * Matching strategy in the MVP:
+ * - if productId is provided in the payload, use it
+ * - otherwise, normalize the raw item name and try to find a product
+ *   by normalizedName
+ *
+ * This keeps receipt ingestion flexible while still allowing price history
+ * and recommendations to work for matched products.
  */
 
 import { Receipt } from "../../../../generated/prisma/client";
 import { AppError } from "../../../shared/errors/app-error";
 import { prisma } from "../../../shared/infra/prisma";
+import { normalizeProductName } from "../../../shared/utils/normalize-product-name";
 import { CreateReceiptDTO } from "../dtos/create-receipt.dto";
 import { ReceiptsRepository } from "../repositories/receipts.repository";
 
@@ -56,6 +62,36 @@ export class CreateReceiptService {
       });
     }
 
+    /**
+     * Resolve product connections before creating the receipt.
+     * This makes it possible to attach products even when the client
+     * does not explicitly send productId.
+     */
+    const resolvedItems = await Promise.all(
+      data.items.map(async (item) => {
+        let resolvedProductId = item.productId;
+
+        if (!resolvedProductId) {
+          const normalizedName = normalizeProductName(item.nameRaw);
+
+          const matchedProduct = await prisma.product.findUnique({
+            where: {
+              normalizedName,
+            },
+          });
+
+          if (matchedProduct) {
+            resolvedProductId = matchedProduct.id;
+          }
+        }
+
+        return {
+          ...item,
+          resolvedProductId,
+        };
+      })
+    );
+
     const receipt = await this.receiptsRepository.create({
       user: {
         connect: { id: data.userId },
@@ -68,16 +104,16 @@ export class CreateReceiptService {
       totalAmount: data.totalAmount,
       purchasedAt: new Date(data.purchasedAt),
       items: {
-        create: data.items.map((item) => ({
+        create: resolvedItems.map((item) => ({
           nameRaw: item.nameRaw,
           unit: item.unit,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           totalPrice: item.totalPrice,
-          ...(item.productId
+          ...(item.resolvedProductId
             ? {
                 product: {
-                  connect: { id: item.productId },
+                  connect: { id: item.resolvedProductId },
                 },
               }
             : {}),

@@ -5,13 +5,22 @@
  * This repository centralizes receipt persistence and query behavior.
  */
 
-import { Prisma, Receipt } from "../../../../generated/prisma/client";
+import { Prisma } from "../../../../generated/prisma/client";
 import { prisma } from "../../../shared/infra/prisma";
 
 export class ReceiptsRepository {
-  async create(data: Prisma.ReceiptCreateInput): Promise<Receipt> {
+  async create(data: Prisma.ReceiptCreateInput) {
     return prisma.receipt.create({
       data,
+      include: {
+        user: true,
+        market: true,
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
     });
   }
 
@@ -36,7 +45,11 @@ export class ReceiptsRepository {
       include: {
         user: true,
         market: true,
-        items: true,
+        items: {
+          include: {
+            product: true,
+          },
+        },
       },
       orderBy: {
         purchasedAt: "desc",
