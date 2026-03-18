@@ -2,10 +2,10 @@
  * Main route registry.
  *
  * All module routes should be composed here.
- * For now, we expose a health check endpoint to validate the infrastructure.
  */
 
 import { Router } from "express";
+import usersRoutes from "./users.routes";
 
 const routes = Router();
 
@@ -26,5 +26,7 @@ routes.get("/health", (_request, response) => {
     service: "shopwise-backend",
   });
 });
+
+routes.use("/users", usersRoutes);
 
 export default routes;
