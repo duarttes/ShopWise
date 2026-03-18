@@ -8,6 +8,7 @@ import { Router } from "express";
 import marketsRoutes from "./markets.routes";
 import productsRoutes from "./products.routes";
 import receiptsRoutes from "./receipts.routes";
+import recommendationsRoutes from "./recommendations.routes";
 import shoppingListsRoutes from "./shopping-lists.routes";
 import usersRoutes from "./users.routes";
 
@@ -36,6 +37,7 @@ routes.use("/markets", marketsRoutes);
 routes.use("/products", productsRoutes);
 routes.use("/receipts", receiptsRoutes);
 routes.use("/shopping-lists", shoppingListsRoutes);
+routes.use(recommendationsRoutes);
 
 /**
  * User-scoped shopping lists endpoint.
