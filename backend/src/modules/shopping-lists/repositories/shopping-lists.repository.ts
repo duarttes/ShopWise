@@ -55,6 +55,9 @@ export class ShoppingListsRepository {
         unit: data.unit,
         productId: data.productId,
       },
+      include: {
+        product: true,
+      },
     });
   }
 
