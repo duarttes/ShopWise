@@ -3,13 +3,14 @@
  *
  * This service calculates the best market recommendations for a shopping list.
  *
- * MVP strategy:
- * - only shopping list items linked to a productId are considered
+ * Improved MVP strategy:
+ * - only shopping list items linked to a productId are used for price comparison
+ * - unmatched items are returned separately
  * - latest price records are grouped by market
- * - estimated totals are calculated per market
- * - cheapest market is always returned if price data exists
- * - closest market is returned only when user coordinates are provided
- * - best value market is currently the same as the cheapest market in the MVP
+ * - each market receives coverage information
+ * - cheapestCompleteMarket only considers markets that cover all matched items
+ * - closestMarket only considers markets with available distance
+ * - bestValueMarket balances coverage and estimated total
  */
 
 import { AppError } from "../../../shared/errors/app-error";
@@ -24,6 +25,8 @@ interface MarketBreakdownItem {
   productId: string;
   productName: string;
   price: number;
+  quantity: number;
+  estimatedItemTotal: number;
   observedAt: Date;
 }
 
@@ -32,6 +35,11 @@ interface MarketBreakdown {
   name: string;
   estimatedTotal: number;
   distanceKm: number | null;
+  coveredItemsCount: number;
+  totalMatchedItemsCount: number;
+  coveragePercentage: number;
+  missingProductIds: string[];
+  missingItemNames: string[];
   items: MarketBreakdownItem[];
 }
 
@@ -48,16 +56,28 @@ export class GetShoppingListRecommendationService {
       throw new AppError("Shopping list not found", 404);
     }
 
-    const productIds = shoppingList.items
-      .map((item) => item.productId)
-      .filter((productId): productId is string => Boolean(productId));
+    /**
+     * Separate matched and unmatched items.
+     * Matched items are the ones linked to a product in the catalog.
+     */
+    const matchedItems = shoppingList.items.filter((item) => Boolean(item.productId));
+    const unmatchedItems = shoppingList.items
+      .filter((item) => !item.productId)
+      .map((item) => ({
+        itemId: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+      }));
 
-    if (productIds.length === 0) {
+    if (matchedItems.length === 0) {
       throw new AppError(
         "Shopping list does not contain items linked to products",
         400
       );
     }
+
+    const productIds = matchedItems.map((item) => item.productId as string);
 
     const latestPriceRecords =
       await this.recommendationsRepository.findLatestPriceRecordsByProductIds(
@@ -74,7 +94,7 @@ export class GetShoppingListRecommendationService {
     const marketBreakdownMap = new Map<string, MarketBreakdown>();
 
     for (const record of latestPriceRecords) {
-      const relatedShoppingListItem = shoppingList.items.find(
+      const relatedShoppingListItem = matchedItems.find(
         (item) => item.productId === record.productId
       );
 
@@ -98,12 +118,19 @@ export class GetShoppingListRecommendationService {
             record.market.latitude,
             record.market.longitude
           ),
+          coveredItemsCount: 1,
+          totalMatchedItemsCount: matchedItems.length,
+          coveragePercentage: 0,
+          missingProductIds: [],
+          missingItemNames: [],
           items: [
             {
               productId: record.productId,
               productName:
                 relatedShoppingListItem.product?.name ?? relatedShoppingListItem.name,
               price: record.price,
+              quantity,
+              estimatedItemTotal,
               observedAt: record.observedAt,
             },
           ],
@@ -112,42 +139,105 @@ export class GetShoppingListRecommendationService {
         continue;
       }
 
+      /**
+       * Avoid duplicated product entries inside the same market breakdown.
+       * This can happen if the same product appears multiple times in the source set.
+       */
+      const alreadyIncluded = existingMarket.items.some(
+        (item) => item.productId === record.productId
+      );
+
+      if (alreadyIncluded) {
+        continue;
+      }
+
       existingMarket.estimatedTotal += estimatedItemTotal;
+      existingMarket.coveredItemsCount += 1;
       existingMarket.items.push({
         productId: record.productId,
         productName:
           relatedShoppingListItem.product?.name ?? relatedShoppingListItem.name,
         price: record.price,
+        quantity,
+        estimatedItemTotal,
         observedAt: record.observedAt,
       });
     }
 
-    const marketBreakdown = Array.from(marketBreakdownMap.values()).sort(
+    const matchedProductIdSet = new Set(productIds);
+
+    const marketBreakdown = Array.from(marketBreakdownMap.values()).map((market) => {
+      const coveredProductIds = new Set(market.items.map((item) => item.productId));
+
+      const missingProductIds = Array.from(matchedProductIdSet).filter(
+        (productId) => !coveredProductIds.has(productId)
+      );
+
+      const missingItemNames = matchedItems
+        .filter((item) => item.productId && missingProductIds.includes(item.productId))
+        .map((item) => item.product?.name ?? item.name);
+
+      const coveragePercentage = Number(
+        ((market.coveredItemsCount / market.totalMatchedItemsCount) * 100).toFixed(2)
+      );
+
+      return {
+        ...market,
+        missingProductIds,
+        missingItemNames,
+        coveragePercentage,
+      };
+    });
+
+    /**
+     * Sort helper lists for different recommendation strategies.
+     */
+    const byEstimatedTotal = [...marketBreakdown].sort(
       (a, b) => a.estimatedTotal - b.estimatedTotal
     );
 
-    const cheapestMarket = marketBreakdown[0] ?? null;
+    const completeMarkets = marketBreakdown
+      .filter((market) => market.coveredItemsCount === market.totalMatchedItemsCount)
+      .sort((a, b) => a.estimatedTotal - b.estimatedTotal);
 
     const marketsWithDistance = marketBreakdown
       .filter((market) => market.distanceKm !== null)
       .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
 
-    const closestMarket = marketsWithDistance[0] ?? null;
-
     /**
-     * MVP simplification:
-     * bestValueMarket is the same as the cheapest market.
-     * Later this can combine total price, distance and item coverage.
+     * Best value strategy for the MVP:
+     * - prioritize higher coverage
+     * - then lower estimated total
+     * - then shorter distance when available
      */
-    const bestValueMarket = cheapestMarket;
+    const byBestValue = [...marketBreakdown].sort((a, b) => {
+      if (b.coveragePercentage !== a.coveragePercentage) {
+        return b.coveragePercentage - a.coveragePercentage;
+      }
+
+      if (a.estimatedTotal !== b.estimatedTotal) {
+        return a.estimatedTotal - b.estimatedTotal;
+      }
+
+      return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
+    });
+
+    const cheapestMarket = byEstimatedTotal[0] ?? null;
+    const cheapestCompleteMarket = completeMarkets[0] ?? null;
+    const closestMarket = marketsWithDistance[0] ?? null;
+    const bestValueMarket = byBestValue[0] ?? null;
 
     return {
       shoppingListId: shoppingList.id,
       shoppingListName: shoppingList.name,
+      matchedItemsCount: matchedItems.length,
+      unmatchedItemsCount: unmatchedItems.length,
+      unmatchedItems,
       cheapestMarket,
+      cheapestCompleteMarket,
       closestMarket,
       bestValueMarket,
-      marketBreakdown,
+      marketBreakdown: byBestValue,
     };
   }
 
@@ -173,7 +263,6 @@ export class GetShoppingListRecommendationService {
     }
 
     const toRadians = (value: number) => (value * Math.PI) / 180;
-
     const earthRadiusKm = 6371;
 
     const deltaLatitude = toRadians(marketLatitude - userLatitude);
