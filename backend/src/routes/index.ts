@@ -13,6 +13,7 @@ import receiptsRoutes from "./receipts.routes";
 import recommendationsRoutes from "./recommendations.routes";
 import shoppingListsRoutes from "./shopping-lists.routes";
 import usersRoutes from "./users.routes";
+import { ensureAuthenticated } from "../shared/middlewares/ensure-authenticated.middleware";
 
 const routes = Router();
 
@@ -47,9 +48,13 @@ routes.use(recommendationsRoutes);
  * User-scoped shopping lists endpoint.
  * This mount keeps compatibility with the desired REST path.
  */
-routes.get("/users/:id/shopping-lists", (request, response, next) => {
-  request.url = `/users/${request.params.id}/shopping-lists`;
-  return shoppingListsRoutes(request, response, next);
-});
+routes.get(
+  "/users/:id/shopping-lists",
+  ensureAuthenticated,
+  (request, response, next) => {
+    request.url = `/users/${request.params.id}/shopping-lists`;
+    return shoppingListsRoutes(request, response, next);
+  }
+);
 
 export default routes;

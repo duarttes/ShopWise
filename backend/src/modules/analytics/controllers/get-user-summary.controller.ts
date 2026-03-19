@@ -7,6 +7,7 @@
 import { Request, Response } from "express";
 import { AnalyticsRepository } from "../repositories/analytics.repository";
 import { GetUserSummaryService } from "../services/get-user-summary.service";
+import { ensureSameUser } from "../../../shared/utils/authorization";
 
 type getUserSummaryService = {
     userId: string;
@@ -20,6 +21,8 @@ export async function getUserSummaryController(
   response: Response
 ): Promise<Response> {
   const { userId } = request.params;
+
+  ensureSameUser(request.user!.id, userId);
 
   const result = await getUserSummaryService.execute(userId);
 

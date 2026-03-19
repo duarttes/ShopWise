@@ -6,11 +6,14 @@
  */
 
 import { Router } from "express";
+import { getCurrentUserController } from "../modules/users/controllers/get-current-user.controller";
 import { getUserByIdController } from "../modules/users/controllers/get-user-by-id.controller";
 import { listUsersController } from "../modules/users/controllers/list-users.controller";
+import { ensureAuthenticated } from "../shared/middlewares/ensure-authenticated.middleware";
 
 const usersRoutes = Router();
 
+usersRoutes.get("/me", ensureAuthenticated, getCurrentUserController);
 usersRoutes.get("/", listUsersController);
 usersRoutes.get("/:id", getUserByIdController);
 

@@ -24,13 +24,21 @@ analyticsRoutes.get(
   getProductLatestPricesController
 );
 
-analyticsRoutes.get("/users/:userId/summary", ensureAuthenticated, getUserSummaryController);
 analyticsRoutes.get(
-  "/users/:userId/spending-by-market", ensureAuthenticated,
+  "/users/:userId/summary",
+  ensureAuthenticated,
+  getUserSummaryController
+);
+
+analyticsRoutes.get(
+  "/users/:userId/spending-by-market",
+  ensureAuthenticated,
   getUserSpendingByMarketController
 );
+
 analyticsRoutes.get(
-  "/users/:userId/recent-receipts", ensureAuthenticated,
+  "/users/:userId/recent-receipts",
+  ensureAuthenticated,
   getUserRecentReceiptsController
 );
 

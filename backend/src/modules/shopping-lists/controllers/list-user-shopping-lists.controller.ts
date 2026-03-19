@@ -7,6 +7,7 @@
 import { Request, Response } from "express";
 import { ShoppingListsRepository } from "../repositories/shopping-lists.repository";
 import { ListUserShoppingListsService } from "../services/list-user-shopping-lists.service";
+import { ensureSameUser } from "../../../shared/utils/authorization";
 
 type listUserShoppingListsService = {
   id: string;
@@ -22,6 +23,8 @@ export async function listUserShoppingListsController(
   response: Response
 ): Promise<Response> {
   const { id } = request.params;
+
+  ensureSameUser(request.user!.id, id);
 
   const shoppingLists = await listUserShoppingListsService.execute(id);
 

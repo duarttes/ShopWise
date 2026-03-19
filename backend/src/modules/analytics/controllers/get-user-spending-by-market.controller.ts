@@ -7,6 +7,7 @@
 import { Request, Response } from "express";
 import { AnalyticsRepository } from "../repositories/analytics.repository";
 import { GetUserSpendingByMarketService } from "../services/get-user-spending-by-market.service";
+import { ensureSameUser } from "../../../shared/utils/authorization";
 
 type getUserSpendingByMarketService = {
     userId: string;
@@ -22,6 +23,8 @@ export async function getUserSpendingByMarketController(
   response: Response
 ): Promise<Response> {
   const { userId } = request.params;
+
+  ensureSameUser(request.user!.id, userId);
 
   const result = await getUserSpendingByMarketService.execute(userId);
 

@@ -8,6 +8,7 @@
 import { Request, Response } from "express";
 import { AnalyticsRepository } from "../repositories/analytics.repository";
 import { GetUserRecentReceiptsService } from "../services/get-user-recent-receipts.service";
+import { ensureSameUser } from "../../../shared/utils/authorization";
 
 type getUserRecentReceiptsService = {
     userId: string;
@@ -23,6 +24,8 @@ export async function getUserRecentReceiptsController(
   response: Response
 ): Promise<Response> {
   const { userId } = request.params;
+
+  ensureSameUser(request.user!.id, userId);
 
   const limit =
     typeof request.query.limit === "string"
