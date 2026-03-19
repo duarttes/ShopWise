@@ -113,4 +113,30 @@ export class AnalyticsRepository {
       take,
     });
   }
+
+  async findUserReceiptItems(userId: string, filters?: DateRangeFilter) {
+    return prisma.receiptItem.findMany({
+      where: {
+        receipt: {
+          userId,
+          purchasedAt: {
+            gte: filters?.startDate,
+            lte: filters?.endDate,
+          },
+        },
+        productId: {
+          not: null,
+        },
+        product: {
+          category: {
+            not: null,
+          },
+        },
+      },
+      include: {
+        product: true,
+        receipt: true,
+      },
+    });
+  }
 }
