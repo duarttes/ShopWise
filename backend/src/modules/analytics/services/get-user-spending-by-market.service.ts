@@ -2,23 +2,31 @@
  * GetUserSpendingByMarketService
  *
  * Aggregates user spending grouped by market.
- * This endpoint is useful for dashboard charts and user spending insights.
+ * Supports optional date range filtering.
  */
 
 import { AppError } from "../../../shared/errors/app-error";
 import { AnalyticsRepository } from "../repositories/analytics.repository";
 
+interface DateRangeFilter {
+  startDate?: Date;
+  endDate?: Date;
+}
+
 export class GetUserSpendingByMarketService {
   constructor(private analyticsRepository: AnalyticsRepository) {}
 
-  async execute(userId: string) {
+  async execute(userId: string, filters?: DateRangeFilter) {
     const user = await this.analyticsRepository.findUserById(userId);
 
     if (!user) {
       throw new AppError("User not found", 404);
     }
 
-    const receipts = await this.analyticsRepository.findUserReceipts(userId);
+    const receipts = await this.analyticsRepository.findUserReceipts(
+      userId,
+      filters
+    );
 
     const spendingMap = new Map<
       string,
@@ -64,6 +72,10 @@ export class GetUserSpendingByMarketService {
         id: user.id,
         name: user.name,
         email: user.email,
+      },
+      filters: {
+        startDate: filters?.startDate ?? null,
+        endDate: filters?.endDate ?? null,
       },
       totalMarkets: markets.length,
       markets,

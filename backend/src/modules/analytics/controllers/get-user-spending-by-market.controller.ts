@@ -8,6 +8,7 @@ import { Request, Response } from "express";
 import { AnalyticsRepository } from "../repositories/analytics.repository";
 import { GetUserSpendingByMarketService } from "../services/get-user-spending-by-market.service";
 import { ensureSameUser } from "../../../shared/utils/authorization";
+import { parseDateRange } from "../../../shared/utils/date-range";
 
 type getUserSpendingByMarketService = {
     userId: string;
@@ -26,7 +27,19 @@ export async function getUserSpendingByMarketController(
 
   ensureSameUser(request.user!.id, userId);
 
-  const result = await getUserSpendingByMarketService.execute(userId);
+    const { startDate, endDate } = parseDateRange(
+    typeof request.query.startDate === "string"
+      ? request.query.startDate
+      : undefined,
+    typeof request.query.endDate === "string"
+      ? request.query.endDate
+      : undefined
+  );
+
+  const result = await getUserSpendingByMarketService.execute(userId, {
+    startDate,
+    endDate,
+  });
 
   return response.status(200).json(result);
 }

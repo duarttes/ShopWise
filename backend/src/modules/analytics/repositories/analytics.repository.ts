@@ -8,6 +8,11 @@
 
 import { prisma } from "../../../shared/infra/prisma";
 
+interface DateRangeFilter {
+  startDate?: Date;
+  endDate?: Date;
+}
+
 export class AnalyticsRepository {
   async findProductById(productId: string) {
     return prisma.product.findUnique({
@@ -58,9 +63,15 @@ export class AnalyticsRepository {
     });
   }
 
-  async findUserReceipts(userId: string) {
+  async findUserReceipts(userId: string, filters?: DateRangeFilter) {
     return prisma.receipt.findMany({
-      where: { userId },
+      where: {
+        userId,
+        purchasedAt: {
+          gte: filters?.startDate,
+          lte: filters?.endDate,
+        },
+      },
       include: {
         market: true,
         items: {
@@ -75,9 +86,19 @@ export class AnalyticsRepository {
     });
   }
 
-  async findRecentUserReceipts(userId: string, take = 10) {
+  async findRecentUserReceipts(
+    userId: string,
+    take = 10,
+    filters?: DateRangeFilter
+  ) {
     return prisma.receipt.findMany({
-      where: { userId },
+      where: {
+        userId,
+        purchasedAt: {
+          gte: filters?.startDate,
+          lte: filters?.endDate,
+        },
+      },
       include: {
         market: true,
         items: {

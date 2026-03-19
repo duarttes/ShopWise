@@ -2,16 +2,21 @@
  * GetUserRecentReceiptsService
  *
  * Returns the most recent receipts created by a user.
- * This endpoint is useful for recent activity sections in the dashboard.
+ * Supports optional date range filtering and custom limits.
  */
 
 import { AppError } from "../../../shared/errors/app-error";
 import { AnalyticsRepository } from "../repositories/analytics.repository";
 
+interface DateRangeFilter {
+  startDate?: Date;
+  endDate?: Date;
+}
+
 export class GetUserRecentReceiptsService {
   constructor(private analyticsRepository: AnalyticsRepository) {}
 
-  async execute(userId: string, limit = 10) {
+  async execute(userId: string, limit = 10, filters?: DateRangeFilter) {
     const user = await this.analyticsRepository.findUserById(userId);
 
     if (!user) {
@@ -22,7 +27,8 @@ export class GetUserRecentReceiptsService {
 
     const receipts = await this.analyticsRepository.findRecentUserReceipts(
       userId,
-      safeLimit
+      safeLimit,
+      filters
     );
 
     return {
@@ -30,6 +36,10 @@ export class GetUserRecentReceiptsService {
         id: user.id,
         name: user.name,
         email: user.email,
+      },
+      filters: {
+        startDate: filters?.startDate ?? null,
+        endDate: filters?.endDate ?? null,
       },
       totalReceipts: receipts.length,
       receipts: receipts.map((receipt) => ({
