@@ -10,6 +10,7 @@ import { getProductPriceHistoryController } from "../modules/analytics/controlle
 import { getUserRecentReceiptsController } from "../modules/analytics/controllers/get-user-recent-receipts.controller";
 import { getUserSpendingByMarketController } from "../modules/analytics/controllers/get-user-spending-by-market.controller";
 import { getUserSummaryController } from "../modules/analytics/controllers/get-user-summary.controller";
+import { ensureAuthenticated } from "../shared/middlewares/ensure-authenticated.middleware";
 
 const analyticsRoutes = Router();
 
@@ -23,13 +24,13 @@ analyticsRoutes.get(
   getProductLatestPricesController
 );
 
-analyticsRoutes.get("/users/:userId/summary", getUserSummaryController);
+analyticsRoutes.get("/users/:userId/summary", ensureAuthenticated, getUserSummaryController);
 analyticsRoutes.get(
-  "/users/:userId/spending-by-market",
+  "/users/:userId/spending-by-market", ensureAuthenticated,
   getUserSpendingByMarketController
 );
 analyticsRoutes.get(
-  "/users/:userId/recent-receipts",
+  "/users/:userId/recent-receipts", ensureAuthenticated,
   getUserRecentReceiptsController
 );
 

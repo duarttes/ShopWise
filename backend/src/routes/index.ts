@@ -6,6 +6,7 @@
 
 import { Router } from "express";
 import analyticsRoutes from "./analytics.routes";
+import authRoutes from "./auth.routes";
 import marketsRoutes from "./markets.routes";
 import productsRoutes from "./products.routes";
 import receiptsRoutes from "./receipts.routes";
@@ -33,6 +34,7 @@ routes.get("/health", (_request, response) => {
   });
 });
 
+routes.use("/auth", authRoutes);
 routes.use("/users", usersRoutes);
 routes.use("/markets", marketsRoutes);
 routes.use("/products", productsRoutes);
