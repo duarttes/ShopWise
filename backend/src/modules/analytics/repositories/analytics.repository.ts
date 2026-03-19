@@ -2,7 +2,8 @@
  * AnalyticsRepository
  *
  * Handles data queries related to analytics and price intelligence.
- * This repository focuses on product price history and latest known prices.
+ * This repository focuses on product price history, latest known prices
+ * and user dashboard summary information.
  */
 
 import { prisma } from "../../../shared/infra/prisma";
@@ -40,9 +41,6 @@ export class AnalyticsRepository {
       },
     });
 
-    /**
-     * Keeps only the newest price record per market.
-     */
     const latestByMarket = new Map<string, (typeof priceRecords)[number]>();
 
     for (const record of priceRecords) {
@@ -52,5 +50,46 @@ export class AnalyticsRepository {
     }
 
     return Array.from(latestByMarket.values()).sort((a, b) => a.price - b.price);
+  }
+
+  async findUserById(userId: string) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+    });
+  }
+
+  async findUserReceipts(userId: string) {
+    return prisma.receipt.findMany({
+      where: { userId },
+      include: {
+        market: true,
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+      orderBy: {
+        purchasedAt: "desc",
+      },
+    });
+  }
+
+  async findRecentUserReceipts(userId: string, take = 10) {
+    return prisma.receipt.findMany({
+      where: { userId },
+      include: {
+        market: true,
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+      orderBy: {
+        purchasedAt: "desc",
+      },
+      take,
+    });
   }
 }
