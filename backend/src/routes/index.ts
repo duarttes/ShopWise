@@ -5,6 +5,7 @@
  */
 
 import { Router } from "express";
+import analyticsRoutes from "./analytics.routes";
 import marketsRoutes from "./markets.routes";
 import productsRoutes from "./products.routes";
 import receiptsRoutes from "./receipts.routes";
@@ -37,6 +38,7 @@ routes.use("/markets", marketsRoutes);
 routes.use("/products", productsRoutes);
 routes.use("/receipts", receiptsRoutes);
 routes.use("/shopping-lists", shoppingListsRoutes);
+routes.use("/analytics", analyticsRoutes);
 routes.use(recommendationsRoutes);
 
 /**
