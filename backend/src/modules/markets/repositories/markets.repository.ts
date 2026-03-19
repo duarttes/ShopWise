@@ -28,13 +28,22 @@ export class MarketsRepository {
     });
   }
 
-  async findMany(): Promise<Market[]> {
+  async findMany(city?: string): Promise<Market[]> {
     return prisma.market.findMany({
+      where: city
+        ? {
+            city: {
+              equals: city,
+              mode: "insensitive",
+            },
+          }
+        : undefined,
       orderBy: {
         createdAt: "desc",
       },
     });
   }
+
   async search(query: string): Promise<Market[]> {
     return prisma.market.findMany({
       where: {

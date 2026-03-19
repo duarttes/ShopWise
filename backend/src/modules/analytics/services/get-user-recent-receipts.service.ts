@@ -11,14 +11,19 @@ import { AnalyticsRepository } from "../repositories/analytics.repository";
 export class GetUserRecentReceiptsService {
   constructor(private analyticsRepository: AnalyticsRepository) {}
 
-  async execute(userId: string) {
+  async execute(userId: string, limit = 10) {
     const user = await this.analyticsRepository.findUserById(userId);
 
     if (!user) {
       throw new AppError("User not found", 404);
     }
 
-    const receipts = await this.analyticsRepository.findRecentUserReceipts(userId);
+    const safeLimit = limit < 1 ? 10 : Math.min(limit, 50);
+
+    const receipts = await this.analyticsRepository.findRecentUserReceipts(
+      userId,
+      safeLimit
+    );
 
     return {
       user: {

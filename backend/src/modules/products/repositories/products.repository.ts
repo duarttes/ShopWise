@@ -28,8 +28,16 @@ export class ProductsRepository {
     });
   }
 
-  async findMany(): Promise<Product[]> {
+  async findMany(category?: string): Promise<Product[]> {
     return prisma.product.findMany({
+      where: category
+        ? {
+            category: {
+              equals: category,
+              mode: "insensitive",
+            },
+          }
+        : undefined,
       orderBy: {
         createdAt: "desc",
       },

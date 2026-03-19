@@ -10,7 +10,7 @@ import { ProductsRepository } from "../repositories/products.repository";
 export class ListProductsService {
   constructor(private productsRepository: ProductsRepository) {}
 
-  async execute(): Promise<Product[]> {
-    return this.productsRepository.findMany();
+  async execute(category?: string): Promise<Product[]> {
+    return this.productsRepository.findMany(category);
   }
 }

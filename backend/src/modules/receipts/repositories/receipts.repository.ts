@@ -40,20 +40,32 @@ export class ReceiptsRepository {
     });
   }
 
-  async findMany() {
-    return prisma.receipt.findMany({
-      include: {
-        user: true,
-        market: true,
-        items: {
-          include: {
-            product: true,
+  async findMany(page: number, limit: number, skip: number) {
+    const [receipts, total] = await Promise.all([
+      prisma.receipt.findMany({
+        include: {
+          user: true,
+          market: true,
+          items: {
+            include: {
+              product: true,
+            },
           },
         },
-      },
-      orderBy: {
-        purchasedAt: "desc",
-      },
-    });
+        orderBy: {
+          purchasedAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.receipt.count(),
+    ]);
+
+    return {
+      receipts,
+      total,
+      page,
+      limit,
+    };
   }
 }

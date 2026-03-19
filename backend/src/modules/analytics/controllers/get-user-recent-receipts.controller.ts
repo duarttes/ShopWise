@@ -2,6 +2,7 @@
  * GetUserRecentReceiptsController
  *
  * Handles the HTTP request for retrieving a user's recent receipts.
+ * Supports a custom result limit through query params.
  */
 
 import { Request, Response } from "express";
@@ -23,9 +24,12 @@ export async function getUserRecentReceiptsController(
 ): Promise<Response> {
   const { userId } = request.params;
 
+  const limit =
+    typeof request.query.limit === "string"
+      ? Number(request.query.limit)
+      : undefined;
 
-
-  const result = await getUserRecentReceiptsService.execute(userId);
+  const result = await getUserRecentReceiptsService.execute(userId, limit);
 
   return response.status(200).json(result);
 }

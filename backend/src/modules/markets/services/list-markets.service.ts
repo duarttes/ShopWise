@@ -10,7 +10,7 @@ import { MarketsRepository } from "../repositories/markets.repository";
 export class ListMarketsService {
   constructor(private marketsRepository: MarketsRepository) {}
 
-  async execute(): Promise<Market[]> {
-    return this.marketsRepository.findMany();
+  async execute(city?: string): Promise<Market[]> {
+    return this.marketsRepository.findMany(city);
   }
 }
