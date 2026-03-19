@@ -1,7 +1,7 @@
 /**
  * ListReceiptsService
  *
- * Returns paginated receipts currently stored in the system.
+ * Returns paginated receipts for the authenticated user only.
  */
 
 import { buildPaginationMeta } from "../../../shared/utils/pagination";
@@ -10,8 +10,13 @@ import { ReceiptsRepository } from "../repositories/receipts.repository";
 export class ListReceiptsService {
   constructor(private receiptsRepository: ReceiptsRepository) {}
 
-  async execute(page: number, limit: number, skip: number) {
-    const result = await this.receiptsRepository.findMany(page, limit, skip);
+  async execute(userId: string, page: number, limit: number, skip: number) {
+    const result = await this.receiptsRepository.findManyByUserId(
+      userId,
+      page,
+      limit,
+      skip
+    );
 
     return {
       data: result.receipts,

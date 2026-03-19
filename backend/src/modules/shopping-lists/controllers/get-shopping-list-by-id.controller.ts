@@ -24,7 +24,11 @@ export async function getShoppingListByIdController(
 ): Promise<Response> {
   const { id } = request.params;
 
-  const shoppingList = await getShoppingListByIdService.execute(id);
+    const shoppingList = await getShoppingListByIdService.execute(
+    id,
+    request.user!.id
+  );
+
 
   return response.status(200).json(shoppingList);
 }

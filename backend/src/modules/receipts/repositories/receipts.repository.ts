@@ -40,9 +40,15 @@ export class ReceiptsRepository {
     });
   }
 
-  async findMany(page: number, limit: number, skip: number) {
+  async findManyByUserId(
+    userId: string,
+    page: number,
+    limit: number,
+    skip: number
+  ) {
     const [receipts, total] = await Promise.all([
       prisma.receipt.findMany({
+        where: { userId },
         include: {
           user: true,
           market: true,
@@ -58,7 +64,9 @@ export class ReceiptsRepository {
         skip,
         take: limit,
       }),
-      prisma.receipt.count(),
+      prisma.receipt.count({
+        where: { userId },
+      }),
     ]);
 
     return {

@@ -28,7 +28,11 @@ export async function addShoppingListItemController(
 
   const data = addShoppingListItemSchema.parse(request.body);
 
-  const item = await addShoppingListItemService.execute(id, data);
+    const item = await addShoppingListItemService.execute(
+    id,
+    request.user!.id,
+    data
+  );
 
   return response.status(201).json(item);
 }

@@ -7,12 +7,13 @@
  * - if productId is provided, validate and use it
  * - otherwise, try to resolve a product automatically by item name
  *
- * This makes shopping list creation more natural for users while improving
- * recommendation coverage when a matching product is found.
+ * Ownership rule:
+ * only the owner of the shopping list can add items to it.
  */
 
 import { AppError } from "../../../shared/errors/app-error";
 import { prisma } from "../../../shared/infra/prisma";
+import { ensureResourceOwner } from "../../../shared/utils/resource-ownership";
 import { resolveProductByName } from "../../../shared/utils/resolve-product-by-name";
 import { AddShoppingListItemDTO } from "../dtos/add-shopping-list-item.dto";
 import { ShoppingListsRepository } from "../repositories/shopping-lists.repository";
@@ -20,12 +21,18 @@ import { ShoppingListsRepository } from "../repositories/shopping-lists.reposito
 export class AddShoppingListItemService {
   constructor(private shoppingListsRepository: ShoppingListsRepository) {}
 
-  async execute(shoppingListId: string, data: AddShoppingListItemDTO) {
+  async execute(
+    shoppingListId: string,
+    authenticatedUserId: string,
+    data: AddShoppingListItemDTO
+  ) {
     const shoppingList = await this.shoppingListsRepository.findById(shoppingListId);
 
     if (!shoppingList) {
       throw new AppError("Shopping list not found", 404);
     }
+
+    ensureResourceOwner(authenticatedUserId, shoppingList.userId);
 
     let resolvedProductId = data.productId;
 

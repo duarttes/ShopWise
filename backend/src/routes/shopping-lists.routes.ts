@@ -14,15 +14,27 @@ import { ensureAuthenticated } from "../shared/middlewares/ensure-authenticated.
 
 const shoppingListsRoutes = Router();
 
-shoppingListsRoutes.post("/", ensureAuthenticated,createShoppingListController);
-shoppingListsRoutes.get("/:id", ensureAuthenticated,getShoppingListByIdController);
-shoppingListsRoutes.post("/:id/items", ensureAuthenticated, addShoppingListItemController);
-shoppingListsRoutes.delete("/:id/items/:itemId", ensureAuthenticated, removeShoppingListItemController);
+shoppingListsRoutes.post("/", ensureAuthenticated, createShoppingListController);
+shoppingListsRoutes.get("/:id", ensureAuthenticated, getShoppingListByIdController);
+shoppingListsRoutes.post(
+  "/:id/items",
+  ensureAuthenticated,
+  addShoppingListItemController
+);
+shoppingListsRoutes.delete(
+  "/:id/items/:itemId",
+  ensureAuthenticated,
+  removeShoppingListItemController
+);
 
 /**
  * User-scoped shopping list route.
  * This route is exposed here to keep the shopping list module self-contained.
  */
-shoppingListsRoutes.get("/users/:id/shopping-lists", ensureAuthenticated, listUserShoppingListsController);
+shoppingListsRoutes.get(
+  "/users/:id/shopping-lists",
+  ensureAuthenticated,
+  listUserShoppingListsController
+);
 
 export default shoppingListsRoutes;

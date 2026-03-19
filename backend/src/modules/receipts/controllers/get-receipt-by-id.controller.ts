@@ -21,7 +21,7 @@ export async function getReceiptByIdController(
 ): Promise<Response> {
   const { id } = request.params;
 
-  const receipt = await getReceiptByIdService.execute(id);
-
+  const receipt = await getReceiptByIdService.execute(id, request.user!.id);
+  
   return response.status(200).json(receipt);
 }

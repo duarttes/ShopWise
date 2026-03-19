@@ -24,8 +24,8 @@ export async function removeShoppingListItemController(
 ): Promise<Response> {
   const { id, itemId } = request.params;
 
-  await removeShoppingListItemService.execute(id, itemId);
-
+  await removeShoppingListItemService.execute(id, request.user!.id, itemId);
+  
   return response.status(200).json({ message: "Item removed successfully" });
 
 }

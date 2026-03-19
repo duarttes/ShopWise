@@ -10,12 +10,15 @@ import { Request, Response } from "express";
 import { createReceiptSchema } from "../schemas/receipt.schema";
 import { ReceiptsRepository } from "../repositories/receipts.repository";
 import { CreateReceiptService } from "../services/create-receipt.service";
+import { ensureSameUser } from "../../../shared/utils/authorization";
 
 export async function createReceiptController(
   request: Request,
   response: Response
 ): Promise<Response> {
   const data = createReceiptSchema.parse(request.body);
+
+  ensureSameUser(request.user!.id, data.userId);
 
   const receiptsRepository = new ReceiptsRepository();
   const createReceiptService = new CreateReceiptService(receiptsRepository);

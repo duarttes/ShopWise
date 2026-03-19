@@ -1,7 +1,8 @@
 /**
  * ListReceiptsController
  *
- * Handles the HTTP request for listing paginated receipts.
+ * Handles the HTTP request for listing paginated receipts
+ * belonging to the authenticated user.
  */
 
 import { Request, Response } from "express";
@@ -21,7 +22,12 @@ export async function listReceiptsController(
   const receiptsRepository = new ReceiptsRepository();
   const listReceiptsService = new ListReceiptsService(receiptsRepository);
 
-  const receipts = await listReceiptsService.execute(page, limit, skip);
+  const receipts = await listReceiptsService.execute(
+    request.user!.id,
+    page,
+    limit,
+    skip
+  );
 
   return response.status(200).json(receipts);
 }
