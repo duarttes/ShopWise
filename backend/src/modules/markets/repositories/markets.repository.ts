@@ -35,4 +35,40 @@ export class MarketsRepository {
       },
     });
   }
+  async search(query: string): Promise<Market[]> {
+    return prisma.market.findMany({
+      where: {
+        OR: [
+          {
+            name: {
+              contains: query,
+              mode: "insensitive",
+            },
+          },
+          {
+            cnpj: {
+              contains: query,
+              mode: "insensitive",
+            },
+          },
+          {
+            city: {
+              contains: query,
+              mode: "insensitive",
+            },
+          },
+          {
+            state: {
+              contains: query,
+              mode: "insensitive",
+            },
+          },
+        ],
+      },
+      orderBy: {
+        name: "asc",
+      },
+      take: 20,
+    });
+  }
 }

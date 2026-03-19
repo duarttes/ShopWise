@@ -35,4 +35,41 @@ export class ProductsRepository {
       },
     });
   }
+
+  async search(query: string): Promise<Product[]> {
+    return prisma.product.findMany({
+      where: {
+        OR: [
+          {
+            name: {
+              contains: query,
+              mode: "insensitive",
+            },
+          },
+          {
+            normalizedName: {
+              contains: query,
+              mode: "insensitive",
+            },
+          },
+          {
+            brand: {
+              contains: query,
+              mode: "insensitive",
+            },
+          },
+          {
+            category: {
+              contains: query,
+              mode: "insensitive",
+            },
+          },
+        ],
+      },
+      orderBy: {
+        name: "asc",
+      },
+      take: 20,
+    });
+  }
 }
