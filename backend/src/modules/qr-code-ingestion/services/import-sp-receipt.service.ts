@@ -16,7 +16,7 @@
 
 import { AppError } from "../../../shared/errors/app-error";
 import { prisma } from "../../../shared/infra/prisma";
-import { resolveProductByName } from "../../../shared/utils/resolve-product-by-name";
+import { resolveOrCreateProductByName } from "../../../shared/utils/resolve-or-create-product-by-name";
 import { ImportSpReceiptDTO } from "../dtos/import-sp-receipt.dto";
 import { FetchSpReceiptService } from "./fetch-sp-receipt.service";
 import { CreateReceiptService } from "../../receipts/services/create-receipt.service";
@@ -60,7 +60,10 @@ export class ImportSpReceiptService {
 
     const resolvedItems = await Promise.all(
     parsedReceipt.items.map(async (item) => {
-        const matchedProduct = await resolveProductByName(item.nameRaw);
+        const resolved = await resolveOrCreateProductByName({
+        rawName: item.nameRaw,
+        unit: item.unit,
+        });
 
         return {
         nameRaw: item.nameRaw,
@@ -68,8 +71,8 @@ export class ImportSpReceiptService {
         quantity: item.quantity ?? undefined,
         unitPrice: item.unitPrice ?? item.totalPrice ?? 0,
         totalPrice: item.totalPrice ?? undefined,
-        productId: matchedProduct?.id,
-        matchedBy: matchedProduct ? "normalized_name" : null,
+        productId: resolved.product.id,
+        matchedBy: resolved.matchedBy,
         };
     })
     );

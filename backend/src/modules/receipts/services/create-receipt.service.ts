@@ -22,7 +22,7 @@ import { AppError } from "../../../shared/errors/app-error";
 import { prisma } from "../../../shared/infra/prisma";
 import { CreateReceiptDTO } from "../dtos/create-receipt.dto";
 import { ReceiptsRepository } from "../repositories/receipts.repository";
-import { resolveProductByName } from "../../../shared/utils/resolve-product-by-name";
+import { resolveOrCreateProductByName } from "../../../shared/utils/resolve-or-create-product-by-name";
 
 export class CreateReceiptService {
   constructor(private receiptsRepository: ReceiptsRepository) {}
@@ -77,17 +77,22 @@ export class CreateReceiptService {
     const resolvedItems = await Promise.all(
       data.items.map(async (item) => {
         let resolvedProductId = item.productId;
-        let matchedBy: "payload" | "resolveProductByName" | null = null;
+        let matchedBy:
+          | "payload"
+          | "existing_product"
+          | "auto_created"
+          | null = null;
 
         if (resolvedProductId) {
           matchedBy = "payload";
         } else {
-            const matchedProduct = await resolveProductByName(item.nameRaw);
+          const resolved = await resolveOrCreateProductByName({
+            rawName: item.nameRaw,
+            unit: item.unit,
+          });
 
-          if (matchedProduct) {
-            resolvedProductId = matchedProduct.id;
-            matchedBy = "resolveProductByName";
-          }
+          resolvedProductId = resolved.product.id;
+          matchedBy = resolved.matchedBy as "existing_product" | "auto_created";
         }
 
         return {
