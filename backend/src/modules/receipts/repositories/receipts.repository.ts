@@ -13,7 +13,15 @@ export class ReceiptsRepository {
     return prisma.receipt.create({
       data,
       include: {
-        user: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
         market: true,
         items: {
           include: {
@@ -28,7 +36,15 @@ export class ReceiptsRepository {
     return prisma.receipt.findUnique({
       where: { id },
       include: {
-        user: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
         market: true,
         items: {
           include: {
@@ -44,7 +60,15 @@ export class ReceiptsRepository {
     return prisma.receipt.findUnique({
       where: { externalCode },
       include: {
-        user: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
         market: true,
         items: true,
       },
@@ -61,7 +85,15 @@ export class ReceiptsRepository {
       prisma.receipt.findMany({
         where: { userId },
         include: {
-          user: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
           market: true,
           items: {
             include: {

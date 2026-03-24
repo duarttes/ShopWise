@@ -4,15 +4,21 @@
  * Parses the public consultation HTML returned by the São Paulo NFC-e portal.
  *
  * Current responsibilities:
- * - extract store identification
- * - extract items
+ * - extract issuer/store identification
+ * - extract receipt items
  * - extract totals
  * - extract payment information
  * - extract issuance metadata
  *
- * MVP note:
- * this parser is intentionally defensive and text-based because
- * public tax portal HTML can change over time.
+ * Important notes:
+ * - public tax portal HTML may change over time
+ * - this parser is intentionally defensive and text-based
+ * - parsing is focused on the visible receipt content, not page layout scripts
+ *
+ * Current known limitations:
+ * - some pages may vary in item/payment layout
+ * - multiple payment methods may require more advanced parsing later
+ * - address parsing is heuristic-based
  */
 
 import * as cheerio from "cheerio";
@@ -58,6 +64,14 @@ export interface ParsedSpReceiptPage {
   };
 }
 
+/**
+ * Converts Brazilian-formatted currency/number strings to numbers.
+ *
+ * Examples:
+ * - "131,92" -> 131.92
+ * - "1.234,56" -> 1234.56
+ * - "R$ 5,99" -> 5.99
+ */
 function parseBrazilianNumber(value?: string | null): number | null {
   if (!value) return null;
 
@@ -76,145 +90,266 @@ function parseBrazilianNumber(value?: string | null): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
+/**
+ * Returns the first capture group of a regex, or null.
+ */
 function extractWithRegex(text: string, regex: RegExp): string | null {
   const match = text.match(regex);
   return match?.[1]?.trim() ?? null;
 }
 
-export function parseSpNfceHtml(html: string): ParsedSpReceiptPage {
-  const $ = cheerio.load(html);
-  const pageText = $.text().replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
-  const lines = $("body")
-    .text()
-    .split("\n")
-    .map((line) => line.replace(/\u00a0/g, " ").trim())
-    .filter(Boolean);
+/**
+ * Normalizes raw text from the HTML body.
+ */
+function normalizeText(value: string): string {
+  return value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+}
 
-  const issuerName = lines[1] ?? null;
-  const cnpjLine = lines.find((line) => line.startsWith("CNPJ:")) ?? null;
-  const addressLine =
-    lines.find(
-      (line) =>
-        !line.startsWith("CNPJ:") &&
-        line.includes("SP") &&
-        line.includes(",") &&
-        !line.includes("Qtde.:")
-    ) ?? null;
-
-  const cnpj = cnpjLine?.replace("CNPJ:", "").trim() ?? null;
-
-  let city: string | null = null;
-  let state: string | null = null;
-
-  if (addressLine) {
-    const addressParts = addressLine.split(",").map((part) => part.trim());
-    city = addressParts[addressParts.length - 2] ?? null;
-    state = addressParts[addressParts.length - 1] ?? null;
+/**
+ * Attempts to extract city and state from a free-form address line.
+ *
+ * Current heuristic:
+ * - split by comma
+ * - use the last two segments as city and state when available
+ */
+function extractCityAndState(addressLine?: string | null): {
+  city: string | null;
+  state: string | null;
+} {
+  if (!addressLine) {
+    return {
+      city: null,
+      state: null,
+    };
   }
 
-  const itemNameIndexes: number[] = [];
+  const parts = addressLine
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
 
-  lines.forEach((line, index) => {
-    if (line.includes("(Código:") && !line.startsWith("Chave de acesso")) {
-      itemNameIndexes.push(index);
+  if (parts.length < 2) {
+    return {
+      city: null,
+      state: null,
+    };
+  }
+
+  const stateCandidate = parts[parts.length - 1] ?? null;
+  const cityCandidate = parts[parts.length - 2] ?? null;
+
+  return {
+    city: cityCandidate,
+    state: stateCandidate,
+  };
+}
+
+/**
+ * Extracts issuer information using the main visible NFC-e block.
+ *
+ * Expected visible pattern:
+ * DOCUMENTO AUXILIAR DA NOTA FISCAL DE CONSUMIDOR ELETRÔNICA
+ * <ISSUER NAME>
+ * CNPJ: <CNPJ>
+ * <ADDRESS>
+ * <FIRST ITEM OR TOTAL SECTION>
+ */
+function extractIssuerInfo(normalizedText: string) {
+  const issuerBlockMatch = normalizedText.match(
+    /DOCUMENTO AUXILIAR DA NOTA FISCAL DE CONSUMIDOR ELETRÔNICA\s+(.*?)\s+CNPJ:\s*([\d./-]+)\s+(.*?)\s+(?=(?:[A-ZÀ-Ú0-9].*?\(Código:)|Qtd\.\s*total de itens:)/i
+  );
+
+  const name = issuerBlockMatch?.[1]?.trim() ?? null;
+  const cnpj = issuerBlockMatch?.[2]?.trim() ?? null;
+  const address = issuerBlockMatch?.[3]?.trim() ?? null;
+
+  const { city, state } = extractCityAndState(address);
+
+  return {
+    name,
+    cnpj,
+    address,
+    city,
+    state,
+  };
+}
+
+/**
+ * Extracts receipt items by scanning visible lines.
+ *
+ * Expected pattern for each item:
+ * <ITEM NAME> (Código: 123)
+ * Qtde.: 1,0000 UN: KG Vl. Unit.: 5,99
+ * 5,99
+ */
+function extractItems(lines: string[]): ParsedReceiptItem[] {
+  const items: ParsedReceiptItem[] = [];
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+
+    const codeMatch = line.match(/^(.*?)\s*\(Código:\s*(\d+)\s*\)$/i);
+
+    if (!codeMatch) {
+      continue;
     }
-  });
 
-  const items: ParsedReceiptItem[] = itemNameIndexes.map((index) => {
-    const itemLine = lines[index] ?? "";
-    const detailLine = lines[index + 1] ?? "";
-    const totalLine = lines[index + 2] ?? "";
+    const nameRaw = codeMatch[1]?.trim() ?? null;
+    const code = codeMatch[2]?.trim() ?? null;
 
-    const nameRaw =
-      itemLine.replace(/\(Código:\s*\d+\s*\)/i, "").trim() || itemLine.trim();
-
-    const code = extractWithRegex(itemLine, /\(Código:\s*(\d+)\s*\)/i);
+    const detailLine = lines[i + 1] ?? "";
+    const totalLine = lines[i + 2] ?? "";
 
     const quantity = parseBrazilianNumber(
-      extractWithRegex(detailLine, /Qtde\.\:(.*?)UN\:/i)
+      extractWithRegex(detailLine, /Qtde\.\:\s*([\d.,]+)/i)
     );
 
     const unit = extractWithRegex(detailLine, /UN\:\s*([A-Z]+)/i);
 
     const unitPrice = parseBrazilianNumber(
-      extractWithRegex(detailLine, /Vl\.\s*Unit\.\:\s*(.*?)Vl\.\s*Total/i)
+      extractWithRegex(detailLine, /Vl\.\s*Unit\.\:\s*([\d.,]+)/i)
     );
 
+    /**
+     * The line after the item details often contains only the item total.
+     * Example: "5,99"
+     */
     const totalPrice = parseBrazilianNumber(totalLine);
 
-    return {
-      nameRaw,
-      code,
-      quantity,
-      unit,
-      unitPrice,
-      totalPrice,
-    };
-  });
+    if (nameRaw) {
+      items.push({
+        nameRaw,
+        code,
+        quantity,
+        unit,
+        unitPrice,
+        totalPrice,
+      });
+    }
+  }
+
+  return items;
+}
+
+/**
+ * Extracts payment methods from the normalized text.
+ *
+ * Current supported methods:
+ * - Cartão de Crédito
+ * - Cartão de Débito
+ * - Dinheiro
+ * - PIX
+ * - Vale Alimentação
+ * - Vale Refeição
+ */
+function extractPayments(normalizedText: string): ParsedPayment[] {
+  const payments: ParsedPayment[] = [];
+
+  const paymentPatterns = [
+    "Cartão de Crédito",
+    "Cartão de Débito",
+    "Dinheiro",
+    "PIX",
+    "Vale Alimentação",
+    "Vale Refeição",
+  ];
+
+  for (const method of paymentPatterns) {
+    const regex = new RegExp(`${method}\\s+([\\d.,]+)`, "i");
+    const match = normalizedText.match(regex);
+
+    if (match) {
+      payments.push({
+        method,
+        amount: parseBrazilianNumber(match[1]),
+      });
+    }
+  }
+
+  return payments;
+}
+
+export function parseSpNfceHtml(html: string): ParsedSpReceiptPage {
+  const $ = cheerio.load(html);
+
+  /**
+   * Remove script/style noise before text extraction.
+   */
+  $("script, style, noscript").remove();
+
+  const bodyText = $("body").text().replace(/\u00a0/g, " ");
+  const normalizedText = normalizeText(bodyText);
+
+  /**
+   * Build cleaned lines for item extraction and fallback heuristics.
+   */
+  const lines = bodyText
+    .split("\n")
+    .map((line) => normalizeText(line))
+    .filter(Boolean)
+    .filter((line) => {
+      const lower = line.toLowerCase();
+
+      return (
+        !lower.startsWith("var ") &&
+        !lower.includes("document.forms") &&
+        !lower.includes("__dopostback") &&
+        !lower.includes("javascript") &&
+        !lower.includes("function(")
+      );
+    });
+
+  const issuer = extractIssuerInfo(normalizedText);
+  const items = extractItems(lines);
+
+  const number = extractWithRegex(normalizedText, /Número:\s*([\d]+)/i);
+  const series = extractWithRegex(normalizedText, /Série:\s*([\d]+)/i);
+
+  const issuedAtMatch = normalizedText.match(
+    /Emissão:\s*(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/i
+  );
+  const issuedAt = issuedAtMatch?.[1]?.trim() ?? null;
+
+  const protocol = extractWithRegex(
+    normalizedText,
+    /Protocolo de Autorização:\s*([\d]+)/i
+  );
+
+  const accessKeyRaw = extractWithRegex(
+    normalizedText,
+    /Chave de acesso:\s*([\d\s]+)/i
+  );
+  const accessKey = accessKeyRaw ? accessKeyRaw.replace(/\s+/g, "") : null;
+
+  const environment = extractWithRegex(
+    normalizedText,
+    /(Ambiente de Produção|Ambiente de Homologação)/i
+  );
 
   const itemsCount = parseBrazilianNumber(
-    extractWithRegex(pageText, /Qtd\.\s*total de itens:\s*(\d+)/i)
+    extractWithRegex(normalizedText, /Qtd\.\s*total de itens:\s*(\d+)/i)
   );
 
   const totalAmount = parseBrazilianNumber(
-    extractWithRegex(pageText, /Valor total R\$\:\s*([\d.,]+)/i)
+    extractWithRegex(normalizedText, /Valor total R\$\:\s*([\d.,]+)/i)
   );
 
   const discountsAmount = parseBrazilianNumber(
-    extractWithRegex(pageText, /Descontos R\$\:\s*([\d.,]+)/i)
+    extractWithRegex(normalizedText, /Descontos R\$\:\s*([\d.,]+)/i)
   );
 
   const amountToPay = parseBrazilianNumber(
-    extractWithRegex(pageText, /Valor a pagar R\$\:\s*([\d.,]+)/i)
+    extractWithRegex(normalizedText, /Valor a pagar R\$\:\s*([\d.,]+)/i)
   );
 
   const changeAmount = parseBrazilianNumber(
-    extractWithRegex(pageText, /Troco\s*([\d.,NaN]+)/i)
+    extractWithRegex(normalizedText, /Troco\s*([\d.,]+)/i)
   );
 
-const number = extractWithRegex(pageText, /Número:\s*([\d]+)/i);
-const series = extractWithRegex(pageText, /Série:\s*([\d]+)/i);
-
-const issuedAtMatch = pageText.match(
-  /Emissão:\s*(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/i
-);
-
-const issuedAt = issuedAtMatch?.[1]?.trim() ?? null;
-
-const protocol = extractWithRegex(
-  pageText,
-  /Protocolo de Autorização:\s*([\d]+)/
-);
-
-const accessKeyRaw = extractWithRegex(
-  pageText,
-  /Chave de acesso:\s*([\d\s]+)/
-);
-
-const accessKey = accessKeyRaw ? accessKeyRaw.replace(/\s+/g, "") : null;
-
-const environment = extractWithRegex(
-  pageText,
-  /(Ambiente de Produção|Ambiente de Homologação)/i
-);
-  const payments: ParsedPayment[] = [];
-  const paymentMatch = pageText.match(/Cartão de Crédito\s+([\d.,]+)/i);
-
-  if (paymentMatch) {
-    payments.push({
-      method: "Cartão de Crédito",
-      amount: parseBrazilianNumber(paymentMatch[1]),
-    });
-  }
+  const payments = extractPayments(normalizedText);
 
   return {
-    issuer: {
-      name: issuerName,
-      cnpj,
-      address: addressLine,
-      city,
-      state,
-    },
+    issuer,
     items,
     totals: {
       itemsCount,
