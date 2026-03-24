@@ -141,7 +141,15 @@ export class CreateReceiptService {
             product: true,
           },
         },
-        user: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
         market: true,
       },
     });

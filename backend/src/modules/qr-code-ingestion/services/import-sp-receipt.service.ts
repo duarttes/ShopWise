@@ -16,7 +16,7 @@
 
 import { AppError } from "../../../shared/errors/app-error";
 import { prisma } from "../../../shared/infra/prisma";
-import { normalizeProductName } from "../../../shared/utils/normalize-product-name";
+import { resolveProductByName } from "../../../shared/utils/resolve-product-by-name";
 import { ImportSpReceiptDTO } from "../dtos/import-sp-receipt.dto";
 import { FetchSpReceiptService } from "./fetch-sp-receipt.service";
 import { CreateReceiptService } from "../../receipts/services/create-receipt.service";
@@ -59,25 +59,19 @@ export class ImportSpReceiptService {
     }
 
     const resolvedItems = await Promise.all(
-      parsedReceipt.items.map(async (item) => {
-        const normalizedName = normalizeProductName(item.nameRaw);
-
-        const matchedProduct = await prisma.product.findUnique({
-          where: {
-            normalizedName,
-          },
-        });
+    parsedReceipt.items.map(async (item) => {
+        const matchedProduct = await resolveProductByName(item.nameRaw);
 
         return {
-          nameRaw: item.nameRaw,
-          unit: item.unit ?? undefined,
-          quantity: item.quantity ?? undefined,
-          unitPrice: item.unitPrice ?? item.totalPrice ?? 0,
-          totalPrice: item.totalPrice ?? undefined,
-          productId: matchedProduct?.id,
-          matchedBy: matchedProduct ? "normalized_name" : null,
+        nameRaw: item.nameRaw,
+        unit: item.unit ?? undefined,
+        quantity: item.quantity ?? undefined,
+        unitPrice: item.unitPrice ?? item.totalPrice ?? 0,
+        totalPrice: item.totalPrice ?? undefined,
+        productId: matchedProduct?.id,
+        matchedBy: matchedProduct ? "normalized_name" : null,
         };
-      })
+    })
     );
 
     const createReceiptService = new CreateReceiptService(new ReceiptsRepository());
