@@ -15,14 +15,14 @@
  * Matching strategy in the MVP:
  * - if productId is provided in the payload, use it
  * - otherwise, normalize the raw item name and try to find a product
- *   by normalizedName
+ *   by resolveProductByName
  */
 
 import { AppError } from "../../../shared/errors/app-error";
 import { prisma } from "../../../shared/infra/prisma";
-import { normalizeProductName } from "../../../shared/utils/normalize-product-name";
 import { CreateReceiptDTO } from "../dtos/create-receipt.dto";
 import { ReceiptsRepository } from "../repositories/receipts.repository";
+import { resolveProductByName } from "../../../shared/utils/resolve-product-by-name";
 
 export class CreateReceiptService {
   constructor(private receiptsRepository: ReceiptsRepository) {}
@@ -77,22 +77,16 @@ export class CreateReceiptService {
     const resolvedItems = await Promise.all(
       data.items.map(async (item) => {
         let resolvedProductId = item.productId;
-        let matchedBy: "payload" | "normalized_name" | null = null;
+        let matchedBy: "payload" | "resolveProductByName" | null = null;
 
         if (resolvedProductId) {
           matchedBy = "payload";
         } else {
-          const normalizedName = normalizeProductName(item.nameRaw);
-
-          const matchedProduct = await prisma.product.findUnique({
-            where: {
-              normalizedName,
-            },
-          });
+            const matchedProduct = await resolveProductByName(item.nameRaw);
 
           if (matchedProduct) {
             resolvedProductId = matchedProduct.id;
-            matchedBy = "normalized_name";
+            matchedBy = "resolveProductByName";
           }
         }
 
