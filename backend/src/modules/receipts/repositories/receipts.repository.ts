@@ -40,6 +40,17 @@ export class ReceiptsRepository {
     });
   }
 
+  async findByExternalCode(externalCode: string) {
+    return prisma.receipt.findUnique({
+      where: { externalCode },
+      include: {
+        user: true,
+        market: true,
+        items: true,
+      },
+    });
+  }
+
   async findManyByUserId(
     userId: string,
     page: number,

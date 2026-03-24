@@ -26,74 +26,38 @@
  *             properties:
  *               userId:
  *                 type: string
- *                 example: 0f9d4a1b-0f9d-4a1b-8c0f-9d4a1b8c0f9d
  *               market:
  *                 type: object
- *                 required:
- *                   - name
- *                 properties:
- *                   name:
- *                     type: string
- *                     example: Supermarket Central
- *                   cnpj:
- *                     type: string
- *                     example: 12345678000199
- *                   city:
- *                     type: string
- *                     example: Americana
- *                   state:
- *                     type: string
- *                     example: SP
  *               externalCode:
  *                 type: string
- *                 example: NFE123456789
  *               sourceType:
  *                 type: string
- *                 example: MANUAL
  *               totalAmount:
  *                 type: number
- *                 example: 120.5
  *               purchasedAt:
  *                 type: string
- *                 example: 2026-03-18T12:00:00.000Z
  *               items:
  *                 type: array
  *                 items:
  *                   type: object
- *                   required:
- *                     - nameRaw
- *                     - unitPrice
- *                   properties:
- *                     nameRaw:
- *                       type: string
- *                       example: BANANA NANICA KG
- *                     unit:
- *                       type: string
- *                       example: kg
- *                     quantity:
- *                       type: number
- *                       example: 1
- *                     unitPrice:
- *                       type: number
- *                       example: 5.99
- *                     totalPrice:
- *                       type: number
- *                       example: 5.99
- *                     productId:
- *                       type: string
- *                       example: 0f9d4a1b-0f9d-4a1b-8c0f-9d4a1b8c0f9d
  *     responses:
  *       201:
  *         description: Receipt created successfully
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: You are not allowed to create a receipt for another user
  *       404:
  *         description: User not found
+ *       409:
+ *         description: A receipt with this external code already exists
  */
 
 /**
  * @swagger
  * /receipts:
  *   get:
- *     summary: List all receipts
+ *     summary: List receipts for the authenticated user
  *     tags: [Receipts]
  *     responses:
  *       200:
@@ -116,6 +80,8 @@
  *     responses:
  *       200:
  *         description: Receipt retrieved successfully
+ *       403:
+ *         description: You are not allowed to access this receipt
  *       404:
  *         description: Receipt not found
  */
