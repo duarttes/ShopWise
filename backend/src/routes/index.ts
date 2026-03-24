@@ -9,6 +9,7 @@ import analyticsRoutes from "./analytics.routes";
 import authRoutes from "./auth.routes";
 import marketsRoutes from "./markets.routes";
 import productsRoutes from "./products.routes";
+import qrCodeIngestionRoutes from "./qr-code-ingestion.routes";
 import receiptsRoutes from "./receipts.routes";
 import recommendationsRoutes from "./recommendations.routes";
 import shoppingListsRoutes from "./shopping-lists.routes";
@@ -48,6 +49,7 @@ routes.use("/products", productsRoutes);
 routes.use("/receipts", receiptsRoutes);
 routes.use("/shopping-lists", shoppingListsRoutes);
 routes.use("/analytics", analyticsRoutes);
+routes.use("/qr-codes", qrCodeIngestionRoutes);
 routes.use(recommendationsRoutes);
 
 /**
