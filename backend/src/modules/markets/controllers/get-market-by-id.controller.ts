@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { MarketsRepository } from "../repositories/markets.repository";
 import { GetMarketByIdService } from "../services/get-market-by-id.service";
+import { buildSuccessResponse } from "../../../shared/utils/api-response";
 
 type GetMarketByIdParams = {
   id: string;
@@ -17,5 +18,10 @@ export async function getMarketByIdController(
 
   const market = await getMarketByIdService.execute(id);
 
-  return response.status(200).json(market);
+  return response.status(200).json(
+    buildSuccessResponse({
+      message: "Market retrieved successfully",
+      data: market,
+    })
+  );
 }

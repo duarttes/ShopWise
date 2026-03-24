@@ -5,6 +5,7 @@
  */
 
 import { Request, Response } from "express";
+import { buildSuccessResponse } from "../../../shared/utils/api-response";
 import { ProductsRepository } from "../repositories/products.repository";
 import { SearchProductsService } from "../services/search-products.service";
 
@@ -20,5 +21,10 @@ export async function searchProductsController(
 
   const products = await searchProductsService.execute(query);
 
-  return response.status(200).json(products);
+  return response.status(200).json(
+    buildSuccessResponse({
+      message: "Products retrieved successfully",
+      data: products,
+    })
+  );
 }

@@ -5,6 +5,7 @@
  */
 
 import { Request, Response } from "express";
+import { buildSuccessResponse } from "../../../shared/utils/api-response";
 import { MarketsRepository } from "../repositories/markets.repository";
 import { SearchMarketsService } from "../services/search-markets.service";
 
@@ -20,5 +21,10 @@ export async function searchMarketsController(
 
   const markets = await searchMarketsService.execute(query);
 
-  return response.status(200).json(markets);
+  return response.status(200).json(
+    buildSuccessResponse({
+      message: "Markets retrieved successfully",
+      data: markets,
+    })
+  );
 }

@@ -2,12 +2,14 @@
  * ListUserShoppingListsController
  *
  * Handles the HTTP request for listing all shopping lists from a specific user.
+ * Only the authenticated user can access their own shopping lists.
  */
 
 import { Request, Response } from "express";
 import { ShoppingListsRepository } from "../repositories/shopping-lists.repository";
 import { ListUserShoppingListsService } from "../services/list-user-shopping-lists.service";
 import { ensureSameUser } from "../../../shared/utils/authorization";
+import { buildSuccessResponse } from "../../../shared/utils/api-response";
 
 type listUserShoppingListsService = {
   id: string;
@@ -28,5 +30,10 @@ export async function listUserShoppingListsController(
 
   const shoppingLists = await listUserShoppingListsService.execute(id);
 
-  return response.status(200).json(shoppingLists);
+  return response.status(200).json(
+    buildSuccessResponse({
+      message: "Shopping lists retrieved successfully",
+      data: shoppingLists,
+    })
+  );
 }

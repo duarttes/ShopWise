@@ -8,6 +8,7 @@
  */
 
 import { Request, Response } from "express";
+import { buildSuccessResponse } from "../../../shared/utils/api-response";
 import { ensureSameUser } from "../../../shared/utils/authorization";
 import { ShoppingListsRepository } from "../repositories/shopping-lists.repository";
 import { createShoppingListSchema } from "../schemas/shopping-list.schema";
@@ -28,5 +29,10 @@ export async function createShoppingListController(
 
   const shoppingList = await createShoppingListService.execute(data);
 
-  return response.status(201).json(shoppingList);
+  return response.status(201).json(
+    buildSuccessResponse({
+      message: "Shopping list created successfully",
+      data: shoppingList,
+    })
+  );
 }

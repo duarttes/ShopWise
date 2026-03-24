@@ -1,6 +1,13 @@
+/**
+ * GetUserByIdController
+ *
+ * Handles the HTTP request for retrieving a user by id.
+ */
+
 import { Request, Response } from "express";
 import { GetUserByIdService } from "../services/get-user-by-id.service";
 import { UsersRepository } from "../repositories/users.repository";
+import { buildSuccessResponse } from "../../../shared/utils/api-response";
 
 type GetUserByIdParams = {
   id: string;
@@ -17,5 +24,16 @@ export async function getUserByIdController(
 
   const user = await getUserByIdService.execute(id);
 
-  return response.status(200).json(user);
+return response.status(200).json(
+    buildSuccessResponse({
+      message: "User retrieved successfully",
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    })
+  );
 }

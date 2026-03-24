@@ -7,6 +7,7 @@
  */
 
 import { Request, Response } from "express";
+import { buildSuccessResponse } from "../../../shared/utils/api-response";
 import { ProductsRepository } from "../repositories/products.repository";
 import { createProductSchema } from "../schemas/product.schema";
 import { CreateProductService } from "../services/create-product.service";
@@ -22,5 +23,10 @@ export async function createProductController(
 
   const product = await createProductService.execute(data);
 
-  return response.status(201).json(product);
+  return response.status(201).json(
+    buildSuccessResponse({
+      message: "Product created successfully",
+      data: product,
+    })
+  );
 }

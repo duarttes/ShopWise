@@ -5,6 +5,7 @@
  */
 
 import { Request, Response } from "express";
+import { buildSuccessResponse } from "../../../shared/utils/api-response";
 import { ListUsersService } from "../services/list-users.service";
 import { UsersRepository } from "../repositories/users.repository";
 
@@ -17,5 +18,16 @@ export async function listUsersController(
 
   const users = await listUsersService.execute();
 
-  return response.status(200).json(users);
+  return response.status(200).json(
+    buildSuccessResponse({
+      message: "Users retrieved successfully",
+      data: users.map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })),
+    })
+  );
 }

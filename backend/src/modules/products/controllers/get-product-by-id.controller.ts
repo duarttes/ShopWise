@@ -7,12 +7,13 @@
 import { Request, Response } from "express";
 import { ProductsRepository } from "../repositories/products.repository";
 import { GetProductByIdService } from "../services/get-product-by-id.service";
+import { buildSuccessResponse } from "../../../shared/utils/api-response";
 
 type getProductByIdParams = {
   id: string;
 };
 
- const productsRepository = new ProductsRepository();
+const productsRepository = new ProductsRepository();
 const getProductByIdService = new GetProductByIdService(productsRepository);
 
 
@@ -25,5 +26,10 @@ export async function getProductByIdController(
 
   const product = await getProductByIdService.execute(id);
 
-  return response.status(200).json(product);
+return response.status(200).json(
+    buildSuccessResponse({
+      message: "Product retrieved successfully",
+      data: product,
+    })
+  );
 }

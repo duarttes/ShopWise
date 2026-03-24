@@ -7,6 +7,7 @@
  */
 
 import { Request, Response } from "express";
+import { buildSuccessResponse } from "../../../shared/utils/api-response";
 import { MarketsRepository } from "../repositories/markets.repository";
 import { createMarketSchema } from "../schemas/market.schema";
 import { CreateMarketService } from "../services/create-market.service";
@@ -22,5 +23,10 @@ export async function createMarketController(
 
   const market = await createMarketService.execute(data);
 
-  return response.status(201).json(market);
+  return response.status(201).json(
+    buildSuccessResponse({
+      message: "Market created successfully",
+      data: market,
+    })
+  );
 }
