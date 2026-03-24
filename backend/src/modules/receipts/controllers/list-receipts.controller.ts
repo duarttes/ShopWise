@@ -6,6 +6,7 @@
  */
 
 import { Request, Response } from "express";
+import { buildSuccessResponse } from "../../../shared/utils/api-response";
 import { parsePagination } from "../../../shared/utils/pagination";
 import { ReceiptsRepository } from "../repositories/receipts.repository";
 import { ListReceiptsService } from "../services/list-receipts.service";
@@ -29,5 +30,11 @@ export async function listReceiptsController(
     skip
   );
 
-  return response.status(200).json(receipts);
+  return response.status(200).json(
+    buildSuccessResponse({
+      message: "Receipts retrieved successfully",
+      data: receipts.data,
+      meta: receipts.meta,
+    })
+  );
 }

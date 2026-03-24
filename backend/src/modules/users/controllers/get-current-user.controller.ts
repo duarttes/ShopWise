@@ -6,6 +6,7 @@
 
 import { Request, Response } from "express";
 import { AppError } from "../../../shared/errors/app-error";
+import { buildSuccessResponse } from "../../../shared/utils/api-response";
 import { UsersRepository } from "../repositories/users.repository";
 
 export async function getCurrentUserController(
@@ -20,11 +21,16 @@ export async function getCurrentUserController(
     throw new AppError("User not found", 404);
   }
 
-  return response.status(200).json({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-  });
+  return response.status(200).json(
+    buildSuccessResponse({
+      message: "Current user retrieved successfully",
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    })
+  );
 }

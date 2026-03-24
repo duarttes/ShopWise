@@ -10,6 +10,7 @@
 import { Request, Response } from "express";
 import { RecommendationsRepository } from "../repositories/recommendations.repository";
 import { GetShoppingListRecommendationService } from "../services/get-shopping-list-recommendation.service";
+import { buildSuccessResponse } from "../../../shared/utils/api-response";
 
 type getShoppingListRecommendationService = {
     id: string;
@@ -38,5 +39,10 @@ export async function getShoppingListRecommendationController(
     userLongitude,
   });
 
-  return response.status(200).json(recommendation);
+return response.status(200).json(
+    buildSuccessResponse({
+      message: "Recommendation generated successfully",
+      data: recommendation,
+    })
+  );
 }

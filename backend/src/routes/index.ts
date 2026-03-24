@@ -14,6 +14,7 @@ import recommendationsRoutes from "./recommendations.routes";
 import shoppingListsRoutes from "./shopping-lists.routes";
 import usersRoutes from "./users.routes";
 import { ensureAuthenticated } from "../shared/middlewares/ensure-authenticated.middleware";
+import { buildSuccessResponse } from "../shared/utils/api-response";
 
 const routes = Router();
 
@@ -29,10 +30,15 @@ const routes = Router();
  *         description: API is healthy
  */
 routes.get("/health", (_request, response) => {
-  return response.status(200).json({
-    status: "ok",
-    service: "shopwise-backend",
-  });
+  return response.status(200).json(
+    buildSuccessResponse({
+      message: "API is healthy",
+      data: {
+        status: "ok",
+        service: "shopwise-backend",
+      },
+    })
+  );
 });
 
 routes.use("/auth", authRoutes);
