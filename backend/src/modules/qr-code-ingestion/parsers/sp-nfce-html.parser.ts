@@ -172,30 +172,31 @@ export function parseSpNfceHtml(html: string): ParsedSpReceiptPage {
     extractWithRegex(pageText, /Troco\s*([\d.,NaN]+)/i)
   );
 
-  const issuedAt = extractWithRegex(
-    pageText,
-    /Número:\s*([\d]+)\s*Série:\s*([\d]+)\s*Emissão:\s*([^-\n]+)/
-  );
+const number = extractWithRegex(pageText, /Número:\s*([\d]+)/i);
+const series = extractWithRegex(pageText, /Série:\s*([\d]+)/i);
 
-  const number = extractWithRegex(pageText, /Número:\s*([\d]+)/i);
-  const series = extractWithRegex(pageText, /Série:\s*([\d]+)/i);
-  const protocol = extractWithRegex(
-    pageText,
-    /Protocolo de Autorização:\s*([\d]+)/
-  );
+const issuedAtMatch = pageText.match(
+  /Emissão:\s*(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/i
+);
 
-  const accessKeyRaw = extractWithRegex(
-    pageText,
-    /Chave de acesso:\s*([\d\s]+)/
-  );
+const issuedAt = issuedAtMatch?.[1]?.trim() ?? null;
 
-  const accessKey = accessKeyRaw ? accessKeyRaw.replace(/\s+/g, "") : null;
+const protocol = extractWithRegex(
+  pageText,
+  /Protocolo de Autorização:\s*([\d]+)/
+);
 
-  const environment = extractWithRegex(
-    pageText,
-    /(Ambiente de Produção|Ambiente de Homologação)/i
-  );
+const accessKeyRaw = extractWithRegex(
+  pageText,
+  /Chave de acesso:\s*([\d\s]+)/
+);
 
+const accessKey = accessKeyRaw ? accessKeyRaw.replace(/\s+/g, "") : null;
+
+const environment = extractWithRegex(
+  pageText,
+  /(Ambiente de Produção|Ambiente de Homologação)/i
+);
   const payments: ParsedPayment[] = [];
   const paymentMatch = pageText.match(/Cartão de Crédito\s+([\d.,]+)/i);
 
