@@ -8,21 +8,18 @@
  * - ensure the user exists
  * - prevent duplicate receipts by externalCode when available
  * - find or create the market
- * - resolve products for receipt items
+ * - try to geocode the market when coordinates are missing
+ * - resolve or create products for receipt items
  * - create the receipt
  * - create price records for matched items
- *
- * Matching strategy in the MVP:
- * - if productId is provided in the payload, use it
- * - otherwise, normalize the raw item name and try to find a product
- *   by resolveProductByName
  */
 
 import { AppError } from "../../../shared/errors/app-error";
 import { prisma } from "../../../shared/infra/prisma";
+import { makeGeocodingProvider } from "../../../shared/geocoding/geocoding-provider.factory";
+import { resolveOrCreateProductByName } from "../../../shared/utils/resolve-or-create-product-by-name";
 import { CreateReceiptDTO } from "../dtos/create-receipt.dto";
 import { ReceiptsRepository } from "../repositories/receipts.repository";
-import { resolveOrCreateProductByName } from "../../../shared/utils/resolve-or-create-product-by-name";
 
 export class CreateReceiptService {
   constructor(private receiptsRepository: ReceiptsRepository) {}
@@ -42,7 +39,10 @@ export class CreateReceiptService {
       );
 
       if (existingReceipt) {
-        throw new AppError("A receipt with this external code already exists", 409);
+        throw new AppError(
+          "A receipt with this external code already exists",
+          409
+        );
       }
     }
 
@@ -69,10 +69,51 @@ export class CreateReceiptService {
         },
       });
     }
+
     /**
-     * Resolve products before creating the receipt.
+     * Try to geocode the market when coordinates are missing
+     * and we have enough address information.
+     *
+     * This runs both for:
+     * - newly created markets
+     * - existing markets that still have no coordinates
+     */
+    if (
+      market.latitude == null &&
+      market.longitude == null &&
+      (market.address || market.city || market.state)
+    ) {
+      try {
+        const geocodingProvider = makeGeocodingProvider();
+
+        const geocoded = await geocodingProvider.geocode({
+          address: market.address,
+          city: market.city,
+          state: market.state,
+          country: "Brazil",
+        });
+
+        if (geocoded) {
+          market = await prisma.market.update({
+            where: { id: market.id },
+            data: {
+              latitude: geocoded.latitude,
+              longitude: geocoded.longitude,
+            },
+          });
+        }
+      } catch (error) {
+        console.warn(
+          `Failed to geocode market ${market.id} (${market.name}):`,
+          error instanceof Error ? error.message : error
+        );
+      }
+    }
+
+    /**
+     * Resolve or create products before creating the receipt.
      * This lets the API report matching statistics and create price records
-     * for matched items after persistence.
+     * after persistence.
      */
     const resolvedItems = await Promise.all(
       data.items.map(async (item) => {
@@ -92,7 +133,9 @@ export class CreateReceiptService {
           });
 
           resolvedProductId = resolved.product.id;
-          matchedBy = resolved.matchedBy as "existing_product" | "auto_created";
+          matchedBy = resolved.matchedBy as
+            | "existing_product"
+            | "auto_created";
         }
 
         return {
@@ -181,8 +224,13 @@ export class CreateReceiptService {
       }
     }
 
-    const matchedItems = resolvedItems.filter((item) => Boolean(item.resolvedProductId));
-    const unmatchedItems = resolvedItems.filter((item) => !item.resolvedProductId);
+    const matchedItems = resolvedItems.filter((item) =>
+      Boolean(item.resolvedProductId)
+    );
+
+    const unmatchedItems = resolvedItems.filter(
+      (item) => !item.resolvedProductId
+    );
 
     return {
       receipt: createdReceipt,

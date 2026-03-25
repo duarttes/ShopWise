@@ -53,6 +53,20 @@ export class MarketsRepository {
     });
   }
 
+  async updateCoordinates(
+    id: string,
+    latitude: number,
+    longitude: number
+  ): Promise<Market> {
+    return prisma.market.update({
+      where: { id },
+      data: {
+        latitude,
+        longitude,
+      },
+    });
+  }
+  
   async search(query: string): Promise<Market[]> {
     return prisma.market.findMany({
       where: {

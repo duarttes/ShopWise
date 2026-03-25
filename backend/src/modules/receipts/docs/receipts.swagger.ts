@@ -85,4 +85,26 @@
  *       404:
  *         description: Receipt not found
  */
+
+/**
+ * @swagger
+ * /markets/{id}/geocode:
+ *   post:
+ *     summary: Geocode a market using its stored address
+ *     tags: [Markets]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Market id
+ *     responses:
+ *       200:
+ *         description: Market geocoded successfully
+ *       404:
+ *         description: Market not found
+ *       422:
+ *         description: Could not geocode market address
+ */
 export {};
