@@ -11,7 +11,7 @@ import { RecommendationsRepository } from "../repositories/recommendations.repos
 import { GetMultiMarketRecommendationService } from "../services/get-multi-market-recommendation.service";
 
 type getMultiMarketRecommendationService = {
-  id: string;
+  id : string;
 };
 
 const recommendationsRepository = new RecommendationsRepository();
@@ -24,7 +24,18 @@ export async function getMultiMarketRecommendationController(
 ): Promise<Response> {
   const { id } = request.params;
 
-  const result = await getMultiMarketRecommendationService.execute(id);
+  const userLatitude = request.query.userLatitude
+    ? Number(request.query.userLatitude)
+    : undefined;
+
+  const userLongitude = request.query.userLongitude
+    ? Number(request.query.userLongitude)
+    : undefined;
+
+  const result = await getMultiMarketRecommendationService.execute(id, {
+    userLatitude,
+    userLongitude,
+  });
 
   return response.status(200).json(
     buildSuccessResponse({
