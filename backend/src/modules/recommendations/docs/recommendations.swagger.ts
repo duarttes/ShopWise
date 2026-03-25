@@ -36,3 +36,23 @@
  *       401:
  *         description: Authentication required
  */
+
+/**
+ * @swagger
+ * /shopping-lists/{id}/multi-market-recommendation:
+ *   get:
+ *     summary: Get a multi-market recommendation for a shopping list
+ *     tags: [Recommendations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Shopping list id
+ *     responses:
+ *       200:
+ *         description: Multi-market recommendation generated successfully
+ *       404:
+ *         description: Shopping list not found
+ */
