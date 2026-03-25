@@ -1,20 +1,31 @@
 /**
  * @swagger
- * /markets/search:
- *   get:
- *     summary: Search markets
+ * /markets/{id}/display-name:
+ *   patch:
+ *     summary: Update a market display name
  *     tags: [Markets]
  *     parameters:
- *       - in: query
- *         name: query
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: Free-text search query
+ *         description: Market id
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - displayName
+ *             properties:
+ *               displayName:
+ *                 type: string
+ *                 example: São Vicente
  *     responses:
  *       200:
- *         description: Markets retrieved successfully
- *       400:
- *         description: Query parameter is required
+ *         description: Market display name updated successfully
+ *       404:
+ *         description: Market not found
  */
-export {};

@@ -22,6 +22,15 @@ export class MarketsRepository {
     });
   }
 
+    async updateDisplayName(id: string, displayName: string): Promise<Market> {
+    return prisma.market.update({
+      where: { id },
+      data: {
+        displayName,
+      },
+    });
+  }
+
   async findByCnpj(cnpj: string): Promise<Market | null> {
     return prisma.market.findUnique({
       where: { cnpj },
