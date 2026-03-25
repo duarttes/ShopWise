@@ -66,7 +66,10 @@ export class GetShoppingListRecommendationService {
       throw new AppError("Shopping list has no items", 400);
     }
 
-    const strategy = params?.strategy ?? "balanced";
+    const strategy = this.resolveStrategy(
+      params?.strategy,
+      shoppingList.user?.recommendationStrategy
+    );
 
     /**
      * Only items linked to products can participate in recommendation.
@@ -291,6 +294,26 @@ export class GetShoppingListRecommendationService {
           distance: 0.15,
         };
     }
+  }
+
+    /**
+   * Ensures the strategy is always a valid enum value.
+   */
+  private resolveStrategy(
+    queryStrategy?: string,
+    userStrategy?: string | null
+  ): "balanced" | "cheapest" | "closest" {
+    const validStrategies = ["balanced", "cheapest", "closest"] as const;
+
+    if (queryStrategy && validStrategies.includes(queryStrategy as any)) {
+      return queryStrategy as "balanced" | "cheapest" | "closest";
+    }
+
+    if (userStrategy && validStrategies.includes(userStrategy as any)) {
+      return userStrategy as "balanced" | "cheapest" | "closest";
+    }
+
+    return "balanced";
   }
 
   private findClosestMarket(entries: MarketRecommendationEntry[]) {

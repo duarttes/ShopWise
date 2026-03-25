@@ -14,15 +14,16 @@ datasource db {
  * In the MVP, users can create receipts and shopping lists.
  */
 model User {
-  id            String         @id @default(uuid())
-  name          String
-  email         String         @unique
-  passwordHash  String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                     String         @id @default(uuid())
+  name                   String
+  email                  String         @unique
+  passwordHash           String
+  recommendationStrategy String?        @default("balanced")
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
 
-  receipts      Receipt[]
-  shoppingLists ShoppingList[]
+  receipts               Receipt[]
+  shoppingLists          ShoppingList[]
 
   @@map("users")
 }

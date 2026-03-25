@@ -11,6 +11,7 @@ export class RecommendationsRepository {
     return prisma.shoppingList.findUnique({
       where: { id: shoppingListId },
       include: {
+        user: true,
         items: {
           include: {
             product: true,

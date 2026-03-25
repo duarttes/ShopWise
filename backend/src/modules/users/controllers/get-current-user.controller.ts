@@ -28,6 +28,8 @@ export async function getCurrentUserController(
         id: user.id,
         name: user.name,
         email: user.email,
+        recommendationStrategy:
+          user.recommendationStrategy ?? "balanced",
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },

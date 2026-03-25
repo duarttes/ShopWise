@@ -28,4 +28,16 @@ export class UsersRepository {
       },
     });
   }
+
+  async updateRecommendationStrategy(
+    id: string,
+    recommendationStrategy: "balanced" | "cheapest" | "closest"
+  ): Promise<User> {
+    return prisma.user.update({
+      where: { id },
+      data: {
+        recommendationStrategy,
+      },
+    });
+  }
 }
