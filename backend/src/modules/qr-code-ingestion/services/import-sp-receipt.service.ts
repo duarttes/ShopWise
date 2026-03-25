@@ -4,28 +4,34 @@
  * Fetches a São Paulo NFC-e public consultation page,
  * parses its contents and imports the result as a ShopWise receipt.
  *
- * Current strategy:
- * - fetch and parse the QR code page
- * - resolve products by normalized item names
- * - create or reuse market by CNPJ
- * - create receipt and price records through the existing receipt workflow
+ * Responsibilities:
+ * - validate user existence
+ * - fetch and parse the São Paulo NFC-e page
+ * - prevent duplicate import by access key
+ * - delegate receipt creation to CreateReceiptService
  *
- * MVP note:
- * this flow depends on the current São Paulo HTML parser and product matching quality.
+ * Important:
+ * - product resolution / auto-creation is handled by CreateReceiptService
+ * - market creation / reuse is handled by CreateReceiptService
+ * - market geocoding is handled by CreateReceiptService
  */
 
 import { AppError } from "../../../shared/errors/app-error";
 import { prisma } from "../../../shared/infra/prisma";
-import { resolveOrCreateProductByName } from "../../../shared/utils/resolve-or-create-product-by-name";
-import { ImportSpReceiptDTO } from "../dtos/import-sp-receipt.dto";
-import { FetchSpReceiptService } from "./fetch-sp-receipt.service";
 import { CreateReceiptService } from "../../receipts/services/create-receipt.service";
 import { ReceiptsRepository } from "../../receipts/repositories/receipts.repository";
+import { ImportSpReceiptDTO } from "../dtos/import-sp-receipt.dto";
+import { FetchSpReceiptService } from "./fetch-sp-receipt.service";
 
 export class ImportSpReceiptService {
   async execute(data: ImportSpReceiptDTO) {
     const user = await prisma.user.findUnique({
       where: { id: data.userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
     });
 
     if (!user) {
@@ -33,6 +39,7 @@ export class ImportSpReceiptService {
     }
 
     const fetchSpReceiptService = new FetchSpReceiptService();
+
     const fetched = await fetchSpReceiptService.execute({
       url: data.url,
     });
@@ -41,45 +48,47 @@ export class ImportSpReceiptService {
     const accessKey = fetched.qrCode.accessKey;
 
     if (!parsedReceipt.issuer.name) {
-      throw new AppError("Could not identify issuer name from São Paulo receipt", 422);
+      throw new AppError(
+        "Could not identify issuer name from São Paulo receipt",
+        422
+      );
     }
 
     if (!parsedReceipt.receiptInfo.issuedAt) {
-      throw new AppError("Could not identify receipt issue date from São Paulo receipt", 422);
+      throw new AppError(
+        "Could not identify receipt issue date from São Paulo receipt",
+        422
+      );
     }
 
-    const existingReceipt = accessKey
-      ? await prisma.receipt.findUnique({
-          where: { externalCode: accessKey },
-        })
-      : null;
+    if (accessKey) {
+      const existingReceipt = await prisma.receipt.findUnique({
+        where: { externalCode: accessKey },
+        select: {
+          id: true,
+          externalCode: true,
+          purchasedAt: true,
+        },
+      });
 
-    if (existingReceipt) {
-      throw new AppError("This São Paulo receipt has already been imported", 409);
+      if (existingReceipt) {
+        throw new AppError("This São Paulo receipt has already been imported", 409);
+      }
     }
 
-    const resolvedItems = await Promise.all(
-    parsedReceipt.items.map(async (item) => {
-        const resolved = await resolveOrCreateProductByName({
-        rawName: item.nameRaw,
-        unit: item.unit,
-        });
-
-        return {
-        nameRaw: item.nameRaw,
-        unit: item.unit ?? undefined,
-        quantity: item.quantity ?? undefined,
-        unitPrice: item.unitPrice ?? item.totalPrice ?? 0,
-        totalPrice: item.totalPrice ?? undefined,
-        productId: resolved.product.id,
-        matchedBy: resolved.matchedBy,
-        };
-    })
+    const createReceiptService = new CreateReceiptService(
+      new ReceiptsRepository()
     );
 
-    const createReceiptService = new CreateReceiptService(new ReceiptsRepository());
-
-    const importedReceipt = await createReceiptService.execute({
+    /**
+     * Delegate all catalog/market logic to CreateReceiptService.
+     * It already:
+     * - resolves or creates products
+     * - creates/reuses markets
+     * - geocodes markets when possible
+     * - creates price records
+     */
+    const created = await createReceiptService.execute({
       userId: data.userId,
       externalCode: accessKey ?? undefined,
       sourceType: "QR_CODE",
@@ -96,13 +105,12 @@ export class ImportSpReceiptService {
         city: parsedReceipt.issuer.city ?? undefined,
         state: parsedReceipt.issuer.state ?? undefined,
       },
-      items: resolvedItems.map((item) => ({
+      items: parsedReceipt.items.map((item) => ({
         nameRaw: item.nameRaw,
-        unit: item.unit,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
-        productId: item.productId,
+        unit: item.unit ?? undefined,
+        quantity: item.quantity ?? undefined,
+        unitPrice: item.unitPrice ?? item.totalPrice ?? 0,
+        totalPrice: item.totalPrice ?? undefined,
       })),
     });
 
@@ -115,19 +123,11 @@ export class ImportSpReceiptService {
       parsed: {
         issuer: parsedReceipt.issuer,
         totals: parsedReceipt.totals,
+        payments: parsedReceipt.payments,
         receiptInfo: parsedReceipt.receiptInfo,
         itemsCount: parsedReceipt.items.length,
       },
-      importSummary: {
-        matchedItemsCount: resolvedItems.filter((item) => Boolean(item.productId)).length,
-        unmatchedItemsCount: resolvedItems.filter((item) => !item.productId).length,
-        unmatchedItems: resolvedItems
-          .filter((item) => !item.productId)
-          .map((item) => ({
-            nameRaw: item.nameRaw,
-          })),
-      },
-      importedReceipt,
+      importedReceipt: created,
     };
   }
 
@@ -137,6 +137,7 @@ export class ImportSpReceiptService {
    */
   private parseIssuedAtToIso(value: string): string {
     const normalized = value.trim();
+
     const match = normalized.match(
       /(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/
     );
@@ -151,7 +152,7 @@ export class ImportSpReceiptService {
   }
 
   /**
-   * Keeps only digits from document identifiers like CNPJ.
+   * Keeps only digits from identifiers like CNPJ.
    */
   private onlyDigits(value?: string | null): string | undefined {
     if (!value) return undefined;
