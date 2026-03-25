@@ -8,13 +8,14 @@
  *
  * This service returns:
  * - closest market
+ * - cheapest market
  * - best value market
  * - ranked market breakdown
  *
- * Ranking strategy (MVP):
- * - coverage has the highest weight
- * - lower price is better
- * - shorter distance is better
+ * Ranking strategies:
+ * - balanced: coverage + price + distance
+ * - cheapest: heavily prioritizes lower price
+ * - closest: heavily prioritizes shorter distance
  */
 
 import { AppError } from "../../../shared/errors/app-error";
@@ -23,6 +24,7 @@ import { RecommendationsRepository } from "../repositories/recommendations.repos
 interface RecommendationParams {
   userLatitude?: number;
   userLongitude?: number;
+  strategy?: "balanced" | "cheapest" | "closest";
 }
 
 interface MarketRecommendationEntry {
@@ -64,6 +66,8 @@ export class GetShoppingListRecommendationService {
       throw new AppError("Shopping list has no items", 400);
     }
 
+    const strategy = params?.strategy ?? "balanced";
+
     /**
      * Only items linked to products can participate in recommendation.
      */
@@ -83,9 +87,6 @@ export class GetShoppingListRecommendationService {
         productBackedItems.map((item) => item.productId!)
       );
 
-    /**
-     * Group latest prices by market.
-     */
     const marketMap = new Map<
       string,
       {
@@ -185,6 +186,7 @@ export class GetShoppingListRecommendationService {
           totalItemsCount: shoppingList.items.length,
           productBackedItemsCount: productBackedItems.length,
         },
+        strategy,
         closestMarket: null,
         cheapestMarket: null,
         bestValueMarket: null,
@@ -192,14 +194,7 @@ export class GetShoppingListRecommendationService {
       };
     }
 
-    /**
-     * Calculate smart recommendation score.
-     */
-    marketBreakdown = this.applyRecommendationScore(marketBreakdown);
-
-    /**
-     * Sort by best recommendation score first.
-     */
+    marketBreakdown = this.applyRecommendationScore(marketBreakdown, strategy);
     marketBreakdown.sort((a, b) => b.recommendationScore - a.recommendationScore);
 
     const closestMarket = this.findClosestMarket(marketBreakdown);
@@ -213,6 +208,7 @@ export class GetShoppingListRecommendationService {
         totalItemsCount: shoppingList.items.length,
         productBackedItemsCount: productBackedItems.length,
       },
+      strategy,
       closestMarket,
       cheapestMarket,
       bestValueMarket,
@@ -220,16 +216,9 @@ export class GetShoppingListRecommendationService {
     };
   }
 
-  /**
-   * Adds a recommendation score to each market entry.
-   *
-   * Score weights:
-   * - coverage: 50%
-   * - price: 35%
-   * - distance: 15%
-   */
   private applyRecommendationScore(
-    entries: MarketRecommendationEntry[]
+    entries: MarketRecommendationEntry[],
+    strategy: "balanced" | "cheapest" | "closest"
   ): MarketRecommendationEntry[] {
     const maxPrice = Math.max(...entries.map((entry) => entry.estimatedTotal));
     const minPrice = Math.min(...entries.map((entry) => entry.estimatedTotal));
@@ -243,23 +232,16 @@ export class GetShoppingListRecommendationService {
     const minDistance =
       validDistances.length > 0 ? Math.min(...validDistances) : null;
 
+    const weights = this.getStrategyWeights(strategy);
+
     return entries.map((entry) => {
       const coverageScore = entry.coveragePercentage / 100;
 
-      /**
-       * Lower price is better.
-       * If all prices are the same, everyone gets 1.
-       */
       const priceScore =
         maxPrice === minPrice
           ? 1
           : 1 - (entry.estimatedTotal - minPrice) / (maxPrice - minPrice);
 
-      /**
-       * Lower distance is better.
-       * If no distance is available, give a neutral score.
-       * If all distances are the same, everyone gets 1.
-       */
       let distanceScore = 0.5;
 
       if (
@@ -274,13 +256,41 @@ export class GetShoppingListRecommendationService {
       }
 
       const recommendationScore =
-        coverageScore * 0.5 + priceScore * 0.35 + distanceScore * 0.15;
+        coverageScore * weights.coverage +
+        priceScore * weights.price +
+        distanceScore * weights.distance;
 
       return {
         ...entry,
         recommendationScore: Number(recommendationScore.toFixed(4)),
       };
     });
+  }
+
+  private getStrategyWeights(strategy: "balanced" | "cheapest" | "closest") {
+    switch (strategy) {
+      case "cheapest":
+        return {
+          coverage: 0.35,
+          price: 0.5,
+          distance: 0.15,
+        };
+
+      case "closest":
+        return {
+          coverage: 0.35,
+          price: 0.15,
+          distance: 0.5,
+        };
+
+      case "balanced":
+      default:
+        return {
+          coverage: 0.5,
+          price: 0.35,
+          distance: 0.15,
+        };
+    }
   }
 
   private findClosestMarket(entries: MarketRecommendationEntry[]) {
@@ -330,9 +340,6 @@ export class GetShoppingListRecommendationService {
     return Number(distance.toFixed(2));
   }
 
-  /**
-   * Calculates the distance between two coordinates using the Haversine formula.
-   */
   private calculateHaversineDistance(
     lat1: number,
     lon1: number,
