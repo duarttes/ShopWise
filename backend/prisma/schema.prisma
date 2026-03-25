@@ -19,6 +19,8 @@ model User {
   email                  String         @unique
   passwordHash           String
   recommendationStrategy String?        @default("balanced")
+  homeLatitude           Float?
+  homeLongitude          Float?
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
 

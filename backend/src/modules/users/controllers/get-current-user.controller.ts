@@ -28,8 +28,9 @@ export async function getCurrentUserController(
         id: user.id,
         name: user.name,
         email: user.email,
-        recommendationStrategy:
-          user.recommendationStrategy ?? "balanced",
+        recommendationStrategy: user.recommendationStrategy ?? "balanced",
+        homeLatitude: user.homeLatitude,
+        homeLongitude: user.homeLongitude,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },

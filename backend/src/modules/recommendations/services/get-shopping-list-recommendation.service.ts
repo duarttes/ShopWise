@@ -4,7 +4,7 @@
  * Calculates shopping list recommendations by comparing:
  * - item coverage
  * - estimated total price
- * - distance from user (when available)
+ * - distance from user (query OR saved location)
  *
  * This service returns:
  * - closest market
@@ -12,10 +12,10 @@
  * - best value market
  * - ranked market breakdown
  *
- * Ranking strategies:
- * - balanced: coverage + price + distance
- * - cheapest: heavily prioritizes lower price
- * - closest: heavily prioritizes shorter distance
+ * Strategy resolution priority:
+ * 1. query param
+ * 2. user preference
+ * 3. default = balanced
  */
 
 import { AppError } from "../../../shared/errors/app-error";
@@ -66,10 +66,25 @@ export class GetShoppingListRecommendationService {
       throw new AppError("Shopping list has no items", 400);
     }
 
+    /**
+     * Resolve strategy safely (prevents invalid string issues)
+     */
     const strategy = this.resolveStrategy(
       params?.strategy,
       shoppingList.user?.recommendationStrategy
     );
+
+    /**
+     * Resolve effective user location
+     * Priority:
+     * 1. query params
+     * 2. saved user location
+     */
+    const effectiveUserLatitude =
+      params?.userLatitude ?? shoppingList.user?.homeLatitude ?? undefined;
+
+    const effectiveUserLongitude =
+      params?.userLongitude ?? shoppingList.user?.homeLongitude ?? undefined;
 
     /**
      * Only items linked to products can participate in recommendation.
@@ -90,6 +105,9 @@ export class GetShoppingListRecommendationService {
         productBackedItems.map((item) => item.productId!)
       );
 
+    /**
+     * Group prices by market
+     */
     const marketMap = new Map<
       string,
       {
@@ -108,9 +126,7 @@ export class GetShoppingListRecommendationService {
         (item) => item.productId === priceRecord.productId
       );
 
-      if (matchedShoppingListItems.length === 0) {
-        continue;
-      }
+      if (matchedShoppingListItems.length === 0) continue;
 
       const mappedItems = matchedShoppingListItems.map((item) => ({
         shoppingListItemId: item.id,
@@ -123,12 +139,12 @@ export class GetShoppingListRecommendationService {
       if (!existing) {
         marketMap.set(priceRecord.marketId, {
           marketId: priceRecord.marketId,
-          marketName: priceRecord.market.displayName ?? priceRecord.market.name,
+          marketName:
+            priceRecord.market.displayName ?? priceRecord.market.name,
           latitude: priceRecord.market.latitude,
           longitude: priceRecord.market.longitude,
           matchedItems: mappedItems,
         });
-
         continue;
       }
 
@@ -155,14 +171,15 @@ export class GetShoppingListRecommendationService {
 
       const matchedItemsCount = market.matchedItems.length;
       const missingItemsCount = totalItemsCount - matchedItemsCount;
+
       const coveragePercentage =
         totalItemsCount > 0
           ? Number(((matchedItemsCount / totalItemsCount) * 100).toFixed(2))
           : 0;
 
       const distanceKm = this.calculateDistanceIfPossible(
-        params?.userLatitude,
-        params?.userLongitude,
+        effectiveUserLatitude,
+        effectiveUserLongitude,
         market.latitude,
         market.longitude
       );
@@ -197,12 +214,17 @@ export class GetShoppingListRecommendationService {
       };
     }
 
-    marketBreakdown = this.applyRecommendationScore(marketBreakdown, strategy);
-    marketBreakdown.sort((a, b) => b.recommendationScore - a.recommendationScore);
+    /**
+     * Apply ranking score
+     */
+    marketBreakdown = this.applyRecommendationScore(
+      marketBreakdown,
+      strategy
+    );
 
-    const closestMarket = this.findClosestMarket(marketBreakdown);
-    const cheapestMarket = this.findCheapestMarket(marketBreakdown);
-    const bestValueMarket = marketBreakdown[0] ?? null;
+    marketBreakdown.sort(
+      (a, b) => b.recommendationScore - a.recommendationScore
+    );
 
     return {
       shoppingList: {
@@ -212,30 +234,48 @@ export class GetShoppingListRecommendationService {
         productBackedItemsCount: productBackedItems.length,
       },
       strategy,
-      closestMarket,
-      cheapestMarket,
-      bestValueMarket,
+      closestMarket: this.findClosestMarket(marketBreakdown),
+      cheapestMarket: this.findCheapestMarket(marketBreakdown),
+      bestValueMarket: marketBreakdown[0] ?? null,
       marketBreakdown,
     };
+  }
+
+  /**
+   * Ensures valid strategy (avoids TS + runtime issues)
+   */
+  private resolveStrategy(
+    queryStrategy?: string,
+    userStrategy?: string | null
+  ): "balanced" | "cheapest" | "closest" {
+    const valid = ["balanced", "cheapest", "closest"] as const;
+
+    if (queryStrategy && valid.includes(queryStrategy as any)) {
+      return queryStrategy as any;
+    }
+
+    if (userStrategy && valid.includes(userStrategy as any)) {
+      return userStrategy as any;
+    }
+
+    return "balanced";
   }
 
   private applyRecommendationScore(
     entries: MarketRecommendationEntry[],
     strategy: "balanced" | "cheapest" | "closest"
-  ): MarketRecommendationEntry[] {
-    const maxPrice = Math.max(...entries.map((entry) => entry.estimatedTotal));
-    const minPrice = Math.min(...entries.map((entry) => entry.estimatedTotal));
-
-    const validDistances = entries
-      .map((entry) => entry.distanceKm)
-      .filter((distance): distance is number => distance !== null);
-
-    const maxDistance =
-      validDistances.length > 0 ? Math.max(...validDistances) : null;
-    const minDistance =
-      validDistances.length > 0 ? Math.min(...validDistances) : null;
-
+  ) {
     const weights = this.getStrategyWeights(strategy);
+
+    const maxPrice = Math.max(...entries.map((e) => e.estimatedTotal));
+    const minPrice = Math.min(...entries.map((e) => e.estimatedTotal));
+
+    const distances = entries
+      .map((e) => e.distanceKm)
+      .filter((d): d is number => d !== null);
+
+    const maxDistance = distances.length ? Math.max(...distances) : null;
+    const minDistance = distances.length ? Math.min(...distances) : null;
 
     return entries.map((entry) => {
       const coverageScore = entry.coveragePercentage / 100;
@@ -255,17 +295,19 @@ export class GetShoppingListRecommendationService {
         distanceScore =
           maxDistance === minDistance
             ? 1
-            : 1 - (entry.distanceKm - minDistance) / (maxDistance - minDistance);
+            : 1 -
+              (entry.distanceKm - minDistance) /
+                (maxDistance - minDistance);
       }
 
-      const recommendationScore =
+      const score =
         coverageScore * weights.coverage +
         priceScore * weights.price +
         distanceScore * weights.distance;
 
       return {
         ...entry,
-        recommendationScore: Number(recommendationScore.toFixed(4)),
+        recommendationScore: Number(score.toFixed(4)),
       };
     });
   }
@@ -273,117 +315,46 @@ export class GetShoppingListRecommendationService {
   private getStrategyWeights(strategy: "balanced" | "cheapest" | "closest") {
     switch (strategy) {
       case "cheapest":
-        return {
-          coverage: 0.35,
-          price: 0.5,
-          distance: 0.15,
-        };
-
+        return { coverage: 0.35, price: 0.5, distance: 0.15 };
       case "closest":
-        return {
-          coverage: 0.35,
-          price: 0.15,
-          distance: 0.5,
-        };
-
-      case "balanced":
+        return { coverage: 0.35, price: 0.15, distance: 0.5 };
       default:
-        return {
-          coverage: 0.5,
-          price: 0.35,
-          distance: 0.15,
-        };
+        return { coverage: 0.5, price: 0.35, distance: 0.15 };
     }
-  }
-
-    /**
-   * Ensures the strategy is always a valid enum value.
-   */
-  private resolveStrategy(
-    queryStrategy?: string,
-    userStrategy?: string | null
-  ): "balanced" | "cheapest" | "closest" {
-    const validStrategies = ["balanced", "cheapest", "closest"] as const;
-
-    if (queryStrategy && validStrategies.includes(queryStrategy as any)) {
-      return queryStrategy as "balanced" | "cheapest" | "closest";
-    }
-
-    if (userStrategy && validStrategies.includes(userStrategy as any)) {
-      return userStrategy as "balanced" | "cheapest" | "closest";
-    }
-
-    return "balanced";
   }
 
   private findClosestMarket(entries: MarketRecommendationEntry[]) {
-    const withDistance = entries.filter(
-      (entry) => entry.distanceKm !== null
-    );
-
-    if (withDistance.length === 0) {
-      return null;
-    }
-
-    return [...withDistance].sort(
-      (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
-    )[0];
+    return entries
+      .filter((e) => e.distanceKm !== null)
+      .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))[0] ?? null;
   }
 
   private findCheapestMarket(entries: MarketRecommendationEntry[]) {
-    if (entries.length === 0) {
-      return null;
-    }
-
     return [...entries].sort((a, b) => a.estimatedTotal - b.estimatedTotal)[0];
   }
 
   private calculateDistanceIfPossible(
-    userLatitude?: number,
-    userLongitude?: number,
-    marketLatitude?: number | null,
-    marketLongitude?: number | null
+    lat1?: number,
+    lon1?: number,
+    lat2?: number | null,
+    lon2?: number | null
   ): number | null {
-    if (
-      userLatitude == null ||
-      userLongitude == null ||
-      marketLatitude == null ||
-      marketLongitude == null
-    ) {
-      return null;
-    }
+    if (!lat1 || !lon1 || !lat2 || !lon2) return null;
 
-    const distance = this.calculateHaversineDistance(
-      userLatitude,
-      userLongitude,
-      marketLatitude,
-      marketLongitude
-    );
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
 
-    return Number(distance.toFixed(2));
-  }
-
-  private calculateHaversineDistance(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ): number {
-    const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
-    const earthRadiusKm = 6371;
-
-    const dLat = toRadians(lat2 - lat1);
-    const dLon = toRadians(lon2 - lon1);
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
 
     const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRadians(lat1)) *
-        Math.cos(toRadians(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) ** 2;
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    return earthRadiusKm * c;
+    return Number((R * c).toFixed(2));
   }
 }

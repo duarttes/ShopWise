@@ -10,15 +10,23 @@ import { getCurrentUserController } from "../modules/users/controllers/get-curre
 import { getUserByIdController } from "../modules/users/controllers/get-user-by-id.controller";
 import { listUsersController } from "../modules/users/controllers/list-users.controller";
 import { updateRecommendationStrategyController } from "../modules/users/controllers/update-recommendation-strategy.controller";
+import { updateUserLocationController } from "../modules/users/controllers/update-user-location.controller";
 import { ensureAuthenticated } from "../shared/middlewares/ensure-authenticated.middleware";
 
 const usersRoutes = Router();
 
 usersRoutes.get("/me", ensureAuthenticated, getCurrentUserController);
+
 usersRoutes.patch(
   "/me/recommendation-strategy",
   ensureAuthenticated,
   updateRecommendationStrategyController
+);
+
+usersRoutes.patch(
+  "/me/location",
+  ensureAuthenticated,
+  updateUserLocationController
 );
 
 usersRoutes.get("/", listUsersController);

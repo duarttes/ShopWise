@@ -1,7 +1,7 @@
 /**
  * UsersRepository
  *
- * Handles read operations related to users.
+ * Handles read and profile update operations related to users.
  * User creation is handled by the auth module.
  */
 
@@ -37,6 +37,20 @@ export class UsersRepository {
       where: { id },
       data: {
         recommendationStrategy,
+      },
+    });
+  }
+
+  async updateLocation(
+    id: string,
+    homeLatitude: number,
+    homeLongitude: number
+  ): Promise<User> {
+    return prisma.user.update({
+      where: { id },
+      data: {
+        homeLatitude,
+        homeLongitude,
       },
     });
   }
