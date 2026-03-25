@@ -56,3 +56,41 @@
  *       404:
  *         description: Shopping list not found
  */
+/**
+ * @swagger
+ * /shopping-lists/{id}/multi-market-recommendation:
+ *   get:
+ *     summary: Get a multi-market recommendation for a shopping list
+ *     tags: [Recommendations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Shopping list id
+ *       - in: query
+ *         name: userLatitude
+ *         required: false
+ *         schema:
+ *           type: number
+ *         description: User latitude
+ *       - in: query
+ *         name: userLongitude
+ *         required: false
+ *         schema:
+ *           type: number
+ *         description: User longitude
+ *       - in: query
+ *         name: maxMarkets
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           enum: [1, 2, 3]
+ *         description: Maximum number of markets to compare
+ *     responses:
+ *       200:
+ *         description: Multi-market recommendation generated successfully
+ *       404:
+ *         description: Shopping list not found
+ */
