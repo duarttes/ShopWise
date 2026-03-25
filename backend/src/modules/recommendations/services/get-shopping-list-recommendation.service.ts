@@ -1,46 +1,47 @@
 /**
  * GetShoppingListRecommendationService
  *
- * This service calculates the best market recommendations for a shopping list.
+ * Calculates shopping list recommendations by comparing:
+ * - item coverage
+ * - estimated total price
+ * - distance from user (when available)
  *
- * Improved MVP strategy:
- * - only shopping list items linked to a productId are used for price comparison
- * - unmatched items are returned separately
- * - latest price records are grouped by market
- * - each market receives coverage information
- * - cheapestCompleteMarket only considers markets that cover all matched items
- * - closestMarket only considers markets with available distance
- * - bestValueMarket balances coverage and estimated total
+ * This service returns:
+ * - closest market
+ * - best value market
+ * - ranked market breakdown
+ *
+ * Ranking strategy (MVP):
+ * - coverage has the highest weight
+ * - lower price is better
+ * - shorter distance is better
  */
 
 import { AppError } from "../../../shared/errors/app-error";
 import { RecommendationsRepository } from "../repositories/recommendations.repository";
 
-interface Coordinates {
+interface RecommendationParams {
   userLatitude?: number;
   userLongitude?: number;
 }
 
-interface MarketBreakdownItem {
-  productId: string;
-  productName: string;
-  price: number;
-  quantity: number;
-  estimatedItemTotal: number;
-  observedAt: Date;
-}
-
-interface MarketBreakdown {
+interface MarketRecommendationEntry {
   marketId: string;
-  name: string;
+  marketName: string;
   estimatedTotal: number;
-  distanceKm: number | null;
-  coveredItemsCount: number;
-  totalMatchedItemsCount: number;
+  matchedItemsCount: number;
+  totalItemsCount: number;
   coveragePercentage: number;
-  missingProductIds: string[];
-  missingItemNames: string[];
-  items: MarketBreakdownItem[];
+  missingItemsCount: number;
+  distanceKm: number | null;
+  matchedItems: Array<{
+    shoppingListItemId: string;
+    shoppingListItemName: string;
+    productId: string;
+    productName: string;
+    price: number;
+  }>;
+  recommendationScore: number;
 }
 
 export class GetShoppingListRecommendationService {
@@ -48,7 +49,10 @@ export class GetShoppingListRecommendationService {
     private recommendationsRepository: RecommendationsRepository
   ) {}
 
-  async execute(shoppingListId: string, coordinates?: Coordinates) {
+  async execute(
+    shoppingListId: string,
+    params?: RecommendationParams
+  ) {
     const shoppingList =
       await this.recommendationsRepository.findShoppingListById(shoppingListId);
 
@@ -56,195 +60,251 @@ export class GetShoppingListRecommendationService {
       throw new AppError("Shopping list not found", 404);
     }
 
-    /**
-     * Separate matched and unmatched items.
-     * Matched items are the ones linked to a product in the catalog.
-     */
-    const matchedItems = shoppingList.items.filter((item) => Boolean(item.productId));
-    const unmatchedItems = shoppingList.items
-      .filter((item) => !item.productId)
-      .map((item) => ({
-        itemId: item.id,
-        name: item.name,
-        quantity: item.quantity,
-        unit: item.unit,
-      }));
+    if (!shoppingList.items || shoppingList.items.length === 0) {
+      throw new AppError("Shopping list has no items", 400);
+    }
 
-    if (matchedItems.length === 0) {
+    /**
+     * Only items linked to products can participate in recommendation.
+     */
+    const productBackedItems = shoppingList.items.filter(
+      (item) => Boolean(item.productId)
+    );
+
+    if (productBackedItems.length === 0) {
       throw new AppError(
-        "Shopping list does not contain items linked to products",
+        "Shopping list has no items linked to products",
         400
       );
     }
 
-    const productIds = matchedItems.map((item) => item.productId as string);
-
-    const latestPriceRecords =
-      await this.recommendationsRepository.findLatestPriceRecordsByProductIds(
-        productIds
+    const productsLatestPrices =
+      await this.recommendationsRepository.findLatestPricesForProducts(
+        productBackedItems.map((item) => item.productId!)
       );
 
-    if (latestPriceRecords.length === 0) {
-      throw new AppError(
-        "No price records found for the products in this shopping list",
-        404
+    /**
+     * Group latest prices by market.
+     */
+    const marketMap = new Map<
+      string,
+      {
+        marketId: string;
+        marketName: string;
+        latitude: number | null;
+        longitude: number | null;
+        matchedItems: MarketRecommendationEntry["matchedItems"];
+      }
+    >();
+
+    for (const priceRecord of productsLatestPrices) {
+      const existing = marketMap.get(priceRecord.marketId);
+
+      const matchedShoppingListItems = productBackedItems.filter(
+        (item) => item.productId === priceRecord.productId
       );
-    }
 
-    const marketBreakdownMap = new Map<string, MarketBreakdown>();
-
-    for (const record of latestPriceRecords) {
-      const relatedShoppingListItem = matchedItems.find(
-        (item) => item.productId === record.productId
-      );
-
-      if (!relatedShoppingListItem) {
+      if (matchedShoppingListItems.length === 0) {
         continue;
       }
 
-      const quantity = relatedShoppingListItem.quantity ?? 1;
-      const estimatedItemTotal = record.price * quantity;
+      const mappedItems = matchedShoppingListItems.map((item) => ({
+        shoppingListItemId: item.id,
+        shoppingListItemName: item.name,
+        productId: priceRecord.product.id,
+        productName: priceRecord.product.name,
+        price: priceRecord.price,
+      }));
 
-      const existingMarket = marketBreakdownMap.get(record.marketId);
-
-      if (!existingMarket) {
-        marketBreakdownMap.set(record.marketId, {
-          marketId: record.marketId,
-          name: record.market.displayName ?? record.market.name,
-          estimatedTotal: estimatedItemTotal,
-          distanceKm: this.calculateDistanceIfPossible(
-            coordinates?.userLatitude,
-            coordinates?.userLongitude,
-            record.market.latitude,
-            record.market.longitude
-          ),
-          coveredItemsCount: 1,
-          totalMatchedItemsCount: matchedItems.length,
-          coveragePercentage: 0,
-          missingProductIds: [],
-          missingItemNames: [],
-          items: [
-            {
-              productId: record.productId,
-              productName:
-                relatedShoppingListItem.product?.name ?? relatedShoppingListItem.name,
-              price: record.price,
-              quantity,
-              estimatedItemTotal,
-              observedAt: record.observedAt,
-            },
-          ],
+      if (!existing) {
+        marketMap.set(priceRecord.marketId, {
+          marketId: priceRecord.marketId,
+          marketName: priceRecord.market.displayName ?? priceRecord.market.name,
+          latitude: priceRecord.market.latitude,
+          longitude: priceRecord.market.longitude,
+          matchedItems: mappedItems,
         });
 
         continue;
       }
 
-      /**
-       * Avoid duplicated product entries inside the same market breakdown.
-       * This can happen if the same product appears multiple times in the source set.
-       */
-      const alreadyIncluded = existingMarket.items.some(
-        (item) => item.productId === record.productId
+      const existingItemIds = new Set(
+        existing.matchedItems.map((item) => item.shoppingListItemId)
       );
 
-      if (alreadyIncluded) {
-        continue;
+      for (const item of mappedItems) {
+        if (!existingItemIds.has(item.shoppingListItemId)) {
+          existing.matchedItems.push(item);
+        }
       }
-
-      existingMarket.estimatedTotal += estimatedItemTotal;
-      existingMarket.coveredItemsCount += 1;
-      existingMarket.items.push({
-        productId: record.productId,
-        productName:
-          relatedShoppingListItem.product?.name ?? relatedShoppingListItem.name,
-        price: record.price,
-        quantity,
-        estimatedItemTotal,
-        observedAt: record.observedAt,
-      });
     }
 
-    const matchedProductIdSet = new Set(productIds);
+    const totalItemsCount = productBackedItems.length;
 
-    const marketBreakdown = Array.from(marketBreakdownMap.values()).map((market) => {
-      const coveredProductIds = new Set(market.items.map((item) => item.productId));
-
-      const missingProductIds = Array.from(matchedProductIdSet).filter(
-        (productId) => !coveredProductIds.has(productId)
+    let marketBreakdown: MarketRecommendationEntry[] = Array.from(
+      marketMap.values()
+    ).map((market) => {
+      const estimatedTotal = market.matchedItems.reduce(
+        (sum, item) => sum + item.price,
+        0
       );
 
-      const missingItemNames = matchedItems
-        .filter((item) => item.productId && missingProductIds.includes(item.productId))
-        .map((item) => item.product?.name ?? item.name);
+      const matchedItemsCount = market.matchedItems.length;
+      const missingItemsCount = totalItemsCount - matchedItemsCount;
+      const coveragePercentage =
+        totalItemsCount > 0
+          ? Number(((matchedItemsCount / totalItemsCount) * 100).toFixed(2))
+          : 0;
 
-      const coveragePercentage = Number(
-        ((market.coveredItemsCount / market.totalMatchedItemsCount) * 100).toFixed(2)
+      const distanceKm = this.calculateDistanceIfPossible(
+        params?.userLatitude,
+        params?.userLongitude,
+        market.latitude,
+        market.longitude
       );
 
       return {
-        ...market,
-        missingProductIds,
-        missingItemNames,
+        marketId: market.marketId,
+        marketName: market.marketName,
+        estimatedTotal: Number(estimatedTotal.toFixed(2)),
+        matchedItemsCount,
+        totalItemsCount,
         coveragePercentage,
+        missingItemsCount,
+        distanceKm,
+        matchedItems: market.matchedItems,
+        recommendationScore: 0,
       };
     });
 
+    if (marketBreakdown.length === 0) {
+      return {
+        shoppingList: {
+          id: shoppingList.id,
+          name: shoppingList.name,
+          totalItemsCount: shoppingList.items.length,
+          productBackedItemsCount: productBackedItems.length,
+        },
+        closestMarket: null,
+        cheapestMarket: null,
+        bestValueMarket: null,
+        marketBreakdown: [],
+      };
+    }
+
     /**
-     * Sort helper lists for different recommendation strategies.
+     * Calculate smart recommendation score.
      */
-    const byEstimatedTotal = [...marketBreakdown].sort(
-      (a, b) => a.estimatedTotal - b.estimatedTotal
-    );
-
-    const completeMarkets = marketBreakdown
-      .filter((market) => market.coveredItemsCount === market.totalMatchedItemsCount)
-      .sort((a, b) => a.estimatedTotal - b.estimatedTotal);
-
-    const marketsWithDistance = marketBreakdown
-      .filter((market) => market.distanceKm !== null)
-      .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+    marketBreakdown = this.applyRecommendationScore(marketBreakdown);
 
     /**
-     * Best value strategy for the MVP:
-     * - prioritize higher coverage
-     * - then lower estimated total
-     * - then shorter distance when available
+     * Sort by best recommendation score first.
      */
-    const byBestValue = [...marketBreakdown].sort((a, b) => {
-      if (b.coveragePercentage !== a.coveragePercentage) {
-        return b.coveragePercentage - a.coveragePercentage;
-      }
+    marketBreakdown.sort((a, b) => b.recommendationScore - a.recommendationScore);
 
-      if (a.estimatedTotal !== b.estimatedTotal) {
-        return a.estimatedTotal - b.estimatedTotal;
-      }
-
-      return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
-    });
-
-    const cheapestMarket = byEstimatedTotal[0] ?? null;
-    const cheapestCompleteMarket = completeMarkets[0] ?? null;
-    const closestMarket = marketsWithDistance[0] ?? null;
-    const bestValueMarket = byBestValue[0] ?? null;
+    const closestMarket = this.findClosestMarket(marketBreakdown);
+    const cheapestMarket = this.findCheapestMarket(marketBreakdown);
+    const bestValueMarket = marketBreakdown[0] ?? null;
 
     return {
-      shoppingListId: shoppingList.id,
-      shoppingListName: shoppingList.name,
-      matchedItemsCount: matchedItems.length,
-      unmatchedItemsCount: unmatchedItems.length,
-      unmatchedItems,
-      cheapestMarket,
-      cheapestCompleteMarket,
+      shoppingList: {
+        id: shoppingList.id,
+        name: shoppingList.name,
+        totalItemsCount: shoppingList.items.length,
+        productBackedItemsCount: productBackedItems.length,
+      },
       closestMarket,
+      cheapestMarket,
       bestValueMarket,
-      marketBreakdown: byBestValue,
+      marketBreakdown,
     };
   }
 
   /**
-   * Calculates distance between two coordinates using the Haversine formula.
-   * Returns null when any required coordinate is missing.
+   * Adds a recommendation score to each market entry.
+   *
+   * Score weights:
+   * - coverage: 50%
+   * - price: 35%
+   * - distance: 15%
    */
+  private applyRecommendationScore(
+    entries: MarketRecommendationEntry[]
+  ): MarketRecommendationEntry[] {
+    const maxPrice = Math.max(...entries.map((entry) => entry.estimatedTotal));
+    const minPrice = Math.min(...entries.map((entry) => entry.estimatedTotal));
+
+    const validDistances = entries
+      .map((entry) => entry.distanceKm)
+      .filter((distance): distance is number => distance !== null);
+
+    const maxDistance =
+      validDistances.length > 0 ? Math.max(...validDistances) : null;
+    const minDistance =
+      validDistances.length > 0 ? Math.min(...validDistances) : null;
+
+    return entries.map((entry) => {
+      const coverageScore = entry.coveragePercentage / 100;
+
+      /**
+       * Lower price is better.
+       * If all prices are the same, everyone gets 1.
+       */
+      const priceScore =
+        maxPrice === minPrice
+          ? 1
+          : 1 - (entry.estimatedTotal - minPrice) / (maxPrice - minPrice);
+
+      /**
+       * Lower distance is better.
+       * If no distance is available, give a neutral score.
+       * If all distances are the same, everyone gets 1.
+       */
+      let distanceScore = 0.5;
+
+      if (
+        entry.distanceKm !== null &&
+        maxDistance !== null &&
+        minDistance !== null
+      ) {
+        distanceScore =
+          maxDistance === minDistance
+            ? 1
+            : 1 - (entry.distanceKm - minDistance) / (maxDistance - minDistance);
+      }
+
+      const recommendationScore =
+        coverageScore * 0.5 + priceScore * 0.35 + distanceScore * 0.15;
+
+      return {
+        ...entry,
+        recommendationScore: Number(recommendationScore.toFixed(4)),
+      };
+    });
+  }
+
+  private findClosestMarket(entries: MarketRecommendationEntry[]) {
+    const withDistance = entries.filter(
+      (entry) => entry.distanceKm !== null
+    );
+
+    if (withDistance.length === 0) {
+      return null;
+    }
+
+    return [...withDistance].sort(
+      (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
+    )[0];
+  }
+
+  private findCheapestMarket(entries: MarketRecommendationEntry[]) {
+    if (entries.length === 0) {
+      return null;
+    }
+
+    return [...entries].sort((a, b) => a.estimatedTotal - b.estimatedTotal)[0];
+  }
+
   private calculateDistanceIfPossible(
     userLatitude?: number,
     userLongitude?: number,
@@ -252,30 +312,48 @@ export class GetShoppingListRecommendationService {
     marketLongitude?: number | null
   ): number | null {
     if (
-      userLatitude === undefined ||
-      userLongitude === undefined ||
-      marketLatitude === null ||
-      marketLatitude === undefined ||
-      marketLongitude === null ||
-      marketLongitude === undefined
+      userLatitude == null ||
+      userLongitude == null ||
+      marketLatitude == null ||
+      marketLongitude == null
     ) {
       return null;
     }
 
-    const toRadians = (value: number) => (value * Math.PI) / 180;
+    const distance = this.calculateHaversineDistance(
+      userLatitude,
+      userLongitude,
+      marketLatitude,
+      marketLongitude
+    );
+
+    return Number(distance.toFixed(2));
+  }
+
+  /**
+   * Calculates the distance between two coordinates using the Haversine formula.
+   */
+  private calculateHaversineDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number {
+    const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
     const earthRadiusKm = 6371;
 
-    const deltaLatitude = toRadians(marketLatitude - userLatitude);
-    const deltaLongitude = toRadians(marketLongitude - userLongitude);
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
 
     const a =
-      Math.sin(deltaLatitude / 2) ** 2 +
-      Math.cos(toRadians(userLatitude)) *
-        Math.cos(toRadians(marketLatitude)) *
-        Math.sin(deltaLongitude / 2) ** 2;
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRadians(lat1)) *
+        Math.cos(toRadians(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    return Number((earthRadiusKm * c).toFixed(2));
+    return earthRadiusKm * c;
   }
 }

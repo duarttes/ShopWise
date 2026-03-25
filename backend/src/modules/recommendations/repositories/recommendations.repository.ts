@@ -1,8 +1,7 @@
 /**
  * RecommendationsRepository
  *
- * Handles all data queries needed by the recommendation engine.
- * This repository centralizes access to shopping lists and price records.
+ * Handles all database operations related to shopping list recommendations.
  */
 
 import { prisma } from "../../../shared/infra/prisma";
@@ -21,7 +20,14 @@ export class RecommendationsRepository {
     });
   }
 
-  async findLatestPriceRecordsByProductIds(productIds: string[]) {
+  /**
+   * Returns the latest known price record for each product in each market.
+   *
+   * Strategy:
+   * - load price records ordered by newest first
+   * - keep only the first occurrence of each (marketId + productId)
+   */
+  async findLatestPricesForProducts(productIds: string[]) {
     const priceRecords = await prisma.priceRecord.findMany({
       where: {
         productId: {
@@ -37,21 +43,19 @@ export class RecommendationsRepository {
       },
     });
 
-    /**
-     * We only want the latest price record per product and market.
-     * Since records are ordered by observedAt descending, the first occurrence
-     * for each product+market pair is the latest one.
-     */
-    const latestRecordsMap = new Map<string, (typeof priceRecords)[number]>();
+    const latestByMarketAndProduct = new Map<
+      string,
+      (typeof priceRecords)[number]
+    >();
 
     for (const record of priceRecords) {
-      const key = `${record.productId}:${record.marketId}`;
+      const key = `${record.marketId}:${record.productId}`;
 
-      if (!latestRecordsMap.has(key)) {
-        latestRecordsMap.set(key, record);
+      if (!latestByMarketAndProduct.has(key)) {
+        latestByMarketAndProduct.set(key, record);
       }
     }
 
-    return Array.from(latestRecordsMap.values());
+    return Array.from(latestByMarketAndProduct.values());
   }
 }
