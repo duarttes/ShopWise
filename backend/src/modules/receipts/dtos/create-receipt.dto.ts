@@ -36,10 +36,27 @@ export interface CreateReceiptMarketDTO {
  */
 export interface CreateReceiptDTO {
   userId: string;
-  market: CreateReceiptMarketDTO;
   externalCode?: string;
   sourceType?: "MANUAL" | "QR_CODE" | "IMPORTED";
   totalAmount: number;
   purchasedAt: string;
-  items: CreateReceiptItemDTO[];
+  market: {
+    name: string;
+    displayName?: string;
+    cnpj?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  items: {
+    nameRaw: string;
+    unit?: string;
+    quantity?: number;
+    unitPrice: number;
+    totalPrice?: number;
+    productId?: string;
+  }[];
 }

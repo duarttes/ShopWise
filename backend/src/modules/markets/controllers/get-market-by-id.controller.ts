@@ -21,7 +21,10 @@ export async function getMarketByIdController(
   return response.status(200).json(
     buildSuccessResponse({
       message: "Market retrieved successfully",
-      data: market,
+      data: {
+        ...market,
+        displayName: market.displayName ?? market.name,
+      },
     })
   );
 }

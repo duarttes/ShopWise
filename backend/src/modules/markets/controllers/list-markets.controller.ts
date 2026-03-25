@@ -25,7 +25,10 @@ export async function listMarketsController(
   return response.status(200).json(
     buildSuccessResponse({
       message: "Markets retrieved successfully",
-      data: markets,
+      data: markets.map((market) => ({
+        ...market,
+        displayName: market.displayName ?? market.name,
+      })),
     })
   );
 }

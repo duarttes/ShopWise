@@ -49,7 +49,7 @@ export class GetUserRecentReceiptsService {
         sourceType: receipt.sourceType,
         market: {
           id: receipt.market.id,
-          name: receipt.market.name,
+          marketName: receipt.market.displayName ?? receipt.market.name,
           city: receipt.market.city,
           state: receipt.market.state,
         },

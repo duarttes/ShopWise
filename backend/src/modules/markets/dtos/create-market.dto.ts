@@ -6,6 +6,7 @@
  */
 export interface CreateMarketDTO {
   name: string;
+  displayName?: string;
   cnpj?: string;
   address?: string;
   city?: string;

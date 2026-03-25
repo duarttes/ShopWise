@@ -51,7 +51,7 @@ export class GetUserSummaryService {
       if (!existing) {
         marketUsageMap.set(receipt.marketId, {
           marketId: receipt.marketId,
-          marketName: receipt.market.name,
+          marketName: receipt.market.displayName ?? receipt.market.name,
           receiptsCount: 1,
           totalSpent: receipt.totalAmount,
         });

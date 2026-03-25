@@ -110,7 +110,7 @@ export class GetShoppingListRecommendationService {
       if (!existingMarket) {
         marketBreakdownMap.set(record.marketId, {
           marketId: record.marketId,
-          name: record.market.name,
+          name: record.market.displayName ?? record.market.name,
           estimatedTotal: estimatedItemTotal,
           distanceKm: this.calculateDistanceIfPossible(
             coordinates?.userLatitude,

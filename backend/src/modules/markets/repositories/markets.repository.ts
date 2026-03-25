@@ -55,6 +55,12 @@ export class MarketsRepository {
             },
           },
           {
+            displayName: {
+              contains: query,
+              mode: "insensitive",
+            },
+          },
+          {
             cnpj: {
               contains: query,
               mode: "insensitive",
@@ -75,7 +81,7 @@ export class MarketsRepository {
         ],
       },
       orderBy: {
-        name: "asc",
+        displayName: "asc",
       },
       take: 20,
     });

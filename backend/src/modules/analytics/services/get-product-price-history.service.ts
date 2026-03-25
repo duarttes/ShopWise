@@ -36,7 +36,7 @@ export class GetProductPriceHistoryService {
         observedAt: record.observedAt,
         market: {
           id: record.market.id,
-          name: record.market.name,
+          name: record.market.displayName ?? record.market.name,
           city: record.market.city,
           state: record.market.state,
         },

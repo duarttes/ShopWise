@@ -35,6 +35,12 @@ const createReceiptMarketSchema = z.object({
     .min(2, "Market name must contain at least 2 characters")
     .max(150, "Market name must contain at most 150 characters"),
 
+  displayName: z
+    .string()
+    .trim()
+    .min(2, "Market display name must contain at least 2 characters")
+    .max(150, "Market display name must contain at most 150 characters")
+    .optional(),
   cnpj: z
     .string()
     .trim()

@@ -58,6 +58,7 @@ export class CreateReceiptService {
       market = await prisma.market.create({
         data: {
           name: data.market.name,
+          displayName: data.market.displayName ?? data.market.name,
           cnpj: data.market.cnpj,
           address: data.market.address,
           city: data.market.city,
@@ -68,7 +69,6 @@ export class CreateReceiptService {
         },
       });
     }
-
     /**
      * Resolve products before creating the receipt.
      * This lets the API report matching statistics and create price records

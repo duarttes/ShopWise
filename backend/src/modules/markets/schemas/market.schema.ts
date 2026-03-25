@@ -1,7 +1,7 @@
 /**
  * Market validation schemas.
  *
- * This file centralizes validation rules related to market input.
+ * This file centralizes validation rules related to markets.
  */
 
 import { z } from "zod";
@@ -9,40 +9,22 @@ import { z } from "zod";
 export const createMarketSchema = z.object({
   name: z
     .string()
-    .min(2, "Name must contain at least 2 characters")
-    .max(150, "Name must contain at most 150 characters"),
+    .trim()
+    .min(2, "Market name must contain at least 2 characters")
+    .max(150, "Market name must contain at most 150 characters"),
 
-  cnpj: z
+  displayName: z
     .string()
     .trim()
-    .min(14, "CNPJ must contain at least 14 characters")
-    .max(18, "CNPJ must contain at most 18 characters")
+    .min(2, "Display name must contain at least 2 characters")
+    .max(150, "Display name must contain at most 150 characters")
     .optional(),
 
-  address: z
-    .string()
-    .trim()
-    .max(255, "Address must contain at most 255 characters")
-    .optional(),
-
-  city: z
-    .string()
-    .trim()
-    .max(100, "City must contain at most 100 characters")
-    .optional(),
-
-  state: z
-    .string()
-    .trim()
-    .max(2, "State must contain at most 2 characters")
-    .optional(),
-
-  zipCode: z
-    .string()
-    .trim()
-    .max(20, "Zip code must contain at most 20 characters")
-    .optional(),
-
+  cnpj: z.string().trim().max(20).optional(),
+  address: z.string().trim().max(255).optional(),
+  city: z.string().trim().max(100).optional(),
+  state: z.string().trim().max(10).optional(),
+  zipCode: z.string().trim().max(20).optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
 });

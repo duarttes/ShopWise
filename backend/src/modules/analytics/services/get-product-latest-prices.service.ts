@@ -33,7 +33,7 @@ export class GetProductLatestPricesService {
       totalMarkets: latestPrices.length,
       markets: latestPrices.map((record) => ({
         marketId: record.market.id,
-        marketName: record.market.name,
+        marketName: record.market.displayName ?? record.market.name,
         city: record.market.city,
         state: record.market.state,
         latitude: record.market.latitude,

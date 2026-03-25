@@ -46,7 +46,7 @@ export class GetUserSpendingByMarketService {
       if (!existing) {
         spendingMap.set(receipt.marketId, {
           marketId: receipt.marketId,
-          marketName: receipt.market.name,
+          marketName: receipt.market.displayName ?? receipt.market.name,
           city: receipt.market.city ?? null,
           state: receipt.market.state ?? null,
           totalSpent: receipt.totalAmount,

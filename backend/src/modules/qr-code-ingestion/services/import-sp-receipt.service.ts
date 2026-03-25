@@ -90,6 +90,7 @@ export class ImportSpReceiptService {
       purchasedAt: this.parseIssuedAtToIso(parsedReceipt.receiptInfo.issuedAt),
       market: {
         name: parsedReceipt.issuer.name,
+        displayName: parsedReceipt.issuer.name,
         cnpj: this.onlyDigits(parsedReceipt.issuer.cnpj),
         address: parsedReceipt.issuer.address ?? undefined,
         city: parsedReceipt.issuer.city ?? undefined,
