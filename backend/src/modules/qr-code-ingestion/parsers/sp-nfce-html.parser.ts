@@ -10,10 +10,15 @@
  * - extract payment information
  * - extract issuance metadata
  *
- * Important notes:
- * - public tax portal HTML may change over time
- * - this parser is intentionally defensive and text-based
- * - parsing is focused on the visible receipt content, not page layout scripts
+ * Parsing strategy:
+ * 1. Prefer structured HTML extraction for issuer and items
+ * 2. Fallback to normalized text regex when needed
+ *
+ * Notes:
+ * - São Paulo NFC-e pages can vary in layout
+ * - item code may be numeric or alphanumeric
+ * - units may vary: KG, UN, UNID, PACOTE, CX, etc.
+ * - duplicated receipt lines must be preserved
  */
 
 import * as cheerio from "cheerio";
@@ -122,52 +127,55 @@ function extractCityAndState(addressLine?: string | null): {
   };
 }
 
-/**
- * Extracts issuer information directly from the full normalized text.
- *
- * Strategy:
- * - name is captured between the NFC-e title and the CNPJ
- * - address is captured between CNPJ and the end of ", SP"
- *
- * This is intentionally state-specific for São Paulo.
- */
-function extractIssuerInfo(normalizedText: string) {
-  const nameMatch = normalizedText.match(
-    /DOCUMENTO AUXILIAR DA NOTA FISCAL DE CONSUMIDOR ELETRÔNICA\s+(.*?)\s+CNPJ:/i
-  );
+function sanitizeItemName(rawName: string): string {
+  return decodeHtmlEntities(rawName.trim()) ?? rawName.trim();
+}
 
-  const cnpjMatch = normalizedText.match(/CNPJ:\s*([\d./-]+)/i);
-
-  /**
-   * Primary address extraction:
-   * capture from CNPJ to the first explicit ", SP"
-   */
-  let addressMatch = normalizedText.match(
-    /CNPJ:\s*[\d./-]+\s+(.*?,\s*SP)(?=\s+[A-ZÀ-Ú0-9].*?\(Código:\s*\d+\)|\s+Qtd\.\s*total de itens:)/i
-  );
-
-  /**
-   * Fallback:
-   * capture everything after CNPJ until the first item block,
-   * then trim the address until ", SP".
-   */
-  if (!addressMatch) {
-    const fallbackMatch = normalizedText.match(
-      /CNPJ:\s*[\d./-]+\s+(.*?)(?=\s+[A-ZÀ-Ú0-9].*?\(Código:\s*\d+\)|\s+Qtd\.\s*total de itens:)/i
-    );
-
-    if (fallbackMatch?.[1]) {
-      const addressUntilState = fallbackMatch[1].match(/^(.*?,\s*SP)/i);
-
-      if (addressUntilState?.[1]) {
-        addressMatch = [addressUntilState[0], addressUntilState[1]] as RegExpMatchArray;
-      }
-    }
+function looksLikeValidItem(item: ParsedReceiptItem): boolean {
+  if (!item.nameRaw || item.nameRaw.length < 2) {
+    return false;
   }
 
-  const name = decodeHtmlEntities(nameMatch?.[1]?.trim() ?? null);
-  const cnpj = cnpjMatch?.[1]?.trim() ?? null;
-  const address = decodeHtmlEntities(addressMatch?.[1]?.trim() ?? null);
+  if (
+    item.nameRaw.includes("DOCUMENTO AUXILIAR") ||
+    item.nameRaw.startsWith("CNPJ:") ||
+    item.nameRaw.startsWith("Chave de acesso")
+  ) {
+    return false;
+  }
+
+  if (item.unitPrice == null && item.totalPrice == null) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Structured issuer extraction for layouts where:
+ * - name is in #u20
+ * - following .text blocks contain CNPJ and address
+ */
+function extractIssuerInfoFromHtml($: cheerio.CheerioAPI) {
+  const rawName = $("#u20").first().text().trim() || null;
+
+  const textBlocks = $(".txtCenter .text")
+    .map((_, el) => normalizeText($(el).text()))
+    .get()
+    .filter(Boolean);
+
+  const cnpjBlock =
+    textBlocks.find((text) => text.toUpperCase().includes("CNPJ")) ?? null;
+
+  const addressBlock =
+    textBlocks.find((text) => !text.toUpperCase().includes("CNPJ")) ?? null;
+
+  const cnpj = cnpjBlock
+    ? extractWithRegex(cnpjBlock, /CNPJ:\s*([\d./-]+)/i)
+    : null;
+
+  const address = decodeHtmlEntities(addressBlock);
+  const name = decodeHtmlEntities(rawName);
 
   const { city, state } = extractCityAndState(address);
 
@@ -181,81 +189,228 @@ function extractIssuerInfo(normalizedText: string) {
 }
 
 /**
- * Item regex over the full normalized text.
- *
- * Expected visible pattern:
- * <ITEM NAME> (Código: 123)
- * Qtde.: 1,0000 UN: KG Vl. Unit.: 5,99 Vl. Total 5,99
+ * Text fallback for issuer extraction.
  */
-const ITEM_REGEX =
-  /(.*?)\s*\(Código:\s*(\d+)\s*\)\s*Qtde\.\:\s*([\d.,]+)\s*UN\:\s*([A-Z]+)\s*Vl\.\s*Unit\.\:\s*([\d.,]+)\s*Vl\.\s*Total\s*([\d.,]+)(?=\s+.*?\(Código:\s*\d+\s*\)|\s+Qtd\.\s*total de itens:|$)/gi;
+function extractIssuerInfoFromText(normalizedText: string) {
+  const nameMatch = normalizedText.match(
+    /DOCUMENTO AUXILIAR DA NOTA FISCAL DE CONSUMIDOR ELETRÔNICA\s+(.*?)\s+CNPJ:/i
+  );
 
-/**
- * Cleans the first item when the regex captures header/address text before it.
- *
- * Example problematic capture:
- * "... AMERICANA , SP MAMAO FORMOSA Kg"
- *
- * This function keeps only:
- * "MAMAO FORMOSA Kg"
- */
-function sanitizeItemName(rawName: string): string {
-  let cleaned = rawName.trim();
+  const cnpjMatch = normalizedText.match(/CNPJ:\s*([\d./-]+)/i);
 
-  /**
-   * If the capture still contains the NFC-e header, cut everything before the last
-   * occurrence of ", SP ".
-   */
-  if (
-    cleaned.includes("DOCUMENTO AUXILIAR") ||
-    cleaned.includes("CNPJ:") ||
-    cleaned.includes(", SP ")
-  ) {
-    const afterStateMatch = cleaned.match(/.*?,\s*SP\s+(.*)$/i);
+  let addressMatch = normalizedText.match(
+    /CNPJ:\s*[\d./-]+\s+(.*?,\s*SP)(?=\s+[A-ZÀ-Ú0-9].*?\(Código:\s*[A-Z0-9]+\)|\s+Qtd\.\s*total de itens:)/i
+  );
 
-    if (afterStateMatch?.[1]) {
-      cleaned = afterStateMatch[1].trim();
+  if (!addressMatch) {
+    const fallbackMatch = normalizedText.match(
+      /CNPJ:\s*[\d./-]+\s+(.*?)(?=\s+[A-ZÀ-Ú0-9].*?\(Código:\s*[A-Z0-9]+\)|\s+Qtd\.\s*total de itens:)/i
+    );
+
+    if (fallbackMatch?.[1]) {
+      const addressUntilState = fallbackMatch[1].match(/^(.*?,\s*SP)/i);
+
+      if (addressUntilState?.[1]) {
+        addressMatch = [
+          addressUntilState[0],
+          addressUntilState[1],
+        ] as RegExpMatchArray;
+      }
     }
   }
 
-  return decodeHtmlEntities(cleaned) ?? cleaned;
+  const name = decodeHtmlEntities(nameMatch?.[1]?.trim() ?? null);
+  const cnpj = cnpjMatch?.[1]?.trim() ?? null;
+  const address = decodeHtmlEntities(addressMatch?.[1]?.trim() ?? null);
+  const { city, state } = extractCityAndState(address);
+
+  return {
+    name,
+    cnpj,
+    address,
+    city,
+    state,
+  };
 }
 
-function extractItems(normalizedText: string): ParsedReceiptItem[] {
+function extractIssuerInfo(
+  $: cheerio.CheerioAPI,
+  normalizedText: string
+): ParsedSpReceiptPage["issuer"] {
+  const htmlIssuer = extractIssuerInfoFromHtml($);
+
+  if (htmlIssuer.name || htmlIssuer.cnpj || htmlIssuer.address) {
+    return htmlIssuer;
+  }
+
+  return extractIssuerInfoFromText(normalizedText);
+}
+
+/**
+ * Extract items from the structured HTML table used in this layout.
+ *
+ * Important:
+ * - duplicated rows must be preserved
+ * - no deduplication should happen here
+ */
+function extractItemsFromHtmlTable($: cheerio.CheerioAPI): ParsedReceiptItem[] {
   const items: ParsedReceiptItem[] = [];
-  const regex = new RegExp(ITEM_REGEX);
 
-  let match: RegExpExecArray | null = null;
+  $("#tabResult tr").each((_, row) => {
+    const rowEl = $(row);
 
-  while ((match = regex.exec(normalizedText)) !== null) {
-    const rawName = match[1]?.trim() ?? null;
-    const code = match[2]?.trim() ?? null;
-    const quantity = parseBrazilianNumber(match[3]);
-    const unit = match[4]?.trim() ?? null;
-    const unitPrice = parseBrazilianNumber(match[5]);
-    const totalPrice = parseBrazilianNumber(match[6]);
+    const nameRaw = sanitizeItemName(
+      rowEl.find(".txtTit").first().text().trim()
+    );
 
-    if (!rawName) {
-      continue;
+    if (!nameRaw) {
+      return;
     }
 
-    const nameRaw = sanitizeItemName(rawName);
+    const codeText = normalizeText(rowEl.find(".RCod").text());
+    const quantityText = normalizeText(rowEl.find(".Rqtd").text());
+    const unitText = normalizeText(rowEl.find(".RUN").text());
+    const unitPriceText = normalizeText(rowEl.find(".RvlUnit").text());
+    const totalPriceText = normalizeText(rowEl.find(".valor").first().text());
 
-    if (!nameRaw || nameRaw.startsWith("CNPJ:")) {
-      continue;
-    }
+    const code =
+      extractWithRegex(codeText, /Código:\s*([A-Z0-9]+)/i) ?? null;
 
-    items.push({
+    const quantity =
+      parseBrazilianNumber(
+        extractWithRegex(quantityText, /Qtde\.\:\s*([\d.,]+)/i)
+      ) ?? null;
+
+    const unit =
+      extractWithRegex(unitText, /UN\:\s*([A-Z0-9]+)/i) ?? null;
+
+    const unitPrice =
+      parseBrazilianNumber(
+        extractWithRegex(unitPriceText, /Vl\.\s*Unit\.\:\s*([\d.,]+)/i)
+      ) ?? null;
+
+    const totalPrice = parseBrazilianNumber(totalPriceText);
+
+    const item: ParsedReceiptItem = {
       nameRaw,
       code,
       quantity,
       unit,
       unitPrice,
       totalPrice,
+    };
+
+    if (looksLikeValidItem(item)) {
+      items.push(item);
+    }
+  });
+
+  return items;
+}
+
+/**
+ * Generic structured HTML fallback.
+ *
+ * Important:
+ * - duplicated rows must be preserved
+ * - no deduplication should happen here
+ */
+function extractItemsFromHtmlCandidates($: cheerio.CheerioAPI): ParsedReceiptItem[] {
+  const items: ParsedReceiptItem[] = [];
+  const candidateTexts = new Set<string>();
+
+  const candidateSelectors = ["table tr", ".item", ".produto", ".prod", "li", "div"];
+
+  for (const selector of candidateSelectors) {
+    $(selector).each((_, element) => {
+      const text = normalizeText($(element).text());
+
+      if (!text) return;
+      if (!text.includes("(Código:")) return;
+      if (!text.includes("Qtde.:")) return;
+
+      candidateTexts.add(text);
     });
   }
 
+  for (const text of candidateTexts) {
+    const structuredMatch = text.match(
+      /(.*?)\s*\(Código:\s*([A-Z0-9]+)\s*\)\s*Qtde\.\:\s*([\d.,]+)\s*UN\:\s*([A-Z0-9]+)\s*Vl\.\s*Unit\.\:\s*([\d.,]+)\s*Vl\.\s*Total\s*([\d.,]+)/i
+    );
+
+    if (!structuredMatch) {
+      continue;
+    }
+
+    const item: ParsedReceiptItem = {
+      nameRaw: sanitizeItemName(structuredMatch[1] ?? ""),
+      code: structuredMatch[2]?.trim() ?? null,
+      quantity: parseBrazilianNumber(structuredMatch[3]),
+      unit: structuredMatch[4]?.trim() ?? null,
+      unitPrice: parseBrazilianNumber(structuredMatch[5]),
+      totalPrice: parseBrazilianNumber(structuredMatch[6]),
+    };
+
+    if (looksLikeValidItem(item)) {
+      items.push(item);
+    }
+  }
+
   return items;
+}
+
+/**
+ * Text fallback for items.
+ * Supports alphanumeric codes and variable units.
+ *
+ * Important:
+ * - duplicated rows must be preserved
+ * - no deduplication should happen here
+ */
+const ITEM_REGEX =
+  /(.*?)\s*\(Código:\s*([A-Z0-9]+)\s*\)\s*Qtde\.\:\s*([\d.,]+)\s*UN\:\s*([A-Z0-9]+)\s*Vl\.\s*Unit\.\:\s*([\d.,]+)\s*Vl\.\s*Total\s*([\d.,]+)(?=\s+.*?\(Código:\s*[A-Z0-9]+\s*\)|\s+Qtd\.\s*total de itens:|$)/gi;
+
+function extractItemsFromText(normalizedText: string): ParsedReceiptItem[] {
+  const items: ParsedReceiptItem[] = [];
+  const regex = new RegExp(ITEM_REGEX);
+
+  let match: RegExpExecArray | null = null;
+
+  while ((match = regex.exec(normalizedText)) !== null) {
+    const item: ParsedReceiptItem = {
+      nameRaw: sanitizeItemName(match[1] ?? ""),
+      code: match[2]?.trim() ?? null,
+      quantity: parseBrazilianNumber(match[3]),
+      unit: match[4]?.trim() ?? null,
+      unitPrice: parseBrazilianNumber(match[5]),
+      totalPrice: parseBrazilianNumber(match[6]),
+    };
+
+    if (looksLikeValidItem(item)) {
+      items.push(item);
+    }
+  }
+
+  return items;
+}
+
+function extractItems(
+  $: cheerio.CheerioAPI,
+  normalizedText: string
+): ParsedReceiptItem[] {
+  const tableItems = extractItemsFromHtmlTable($);
+
+  if (tableItems.length > 0) {
+    return tableItems;
+  }
+
+  const candidateHtmlItems = extractItemsFromHtmlCandidates($);
+
+  if (candidateHtmlItems.length > 0) {
+    return candidateHtmlItems;
+  }
+
+  return extractItemsFromText(normalizedText);
 }
 
 function extractPayments(normalizedText: string): ParsedPayment[] {
@@ -293,8 +448,8 @@ export function parseSpNfceHtml(html: string): ParsedSpReceiptPage {
   const bodyText = $("body").text().replace(/\u00a0/g, " ");
   const normalizedText = normalizeText(bodyText);
 
-  const issuer = extractIssuerInfo(normalizedText);
-  const items = extractItems(normalizedText);
+  const issuer = extractIssuerInfo($, normalizedText);
+  const items = extractItems($, normalizedText);
 
   const number = extractWithRegex(normalizedText, /Número:\s*([\d]+)/i);
   const series = extractWithRegex(normalizedText, /Série:\s*([\d]+)/i);
