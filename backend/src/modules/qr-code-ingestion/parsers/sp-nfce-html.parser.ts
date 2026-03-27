@@ -9,6 +9,7 @@
  * - extract totals
  * - extract payment information
  * - extract issuance metadata
+ * - expose parsing confidence diagnostics
  *
  * Parsing strategy:
  * 1. Prefer structured HTML extraction for issuer and items
@@ -61,6 +62,10 @@ export interface ParsedSpReceiptPage {
     protocol: string | null;
     accessKey: string | null;
     environment: string | null;
+  };
+  parsing: {
+    confidenceScore: number;
+    warnings: string[];
   };
 }
 
@@ -440,6 +445,73 @@ function extractPayments(normalizedText: string): ParsedPayment[] {
   return payments;
 }
 
+function buildParsingDiagnostics(data: {
+  issuer: ParsedSpReceiptPage["issuer"];
+  items: ParsedReceiptItem[];
+  totals: ParsedSpReceiptPage["totals"];
+  payments: ParsedPayment[];
+  receiptInfo: ParsedSpReceiptPage["receiptInfo"];
+}) {
+  const warnings: string[] = [];
+  let score = 100;
+
+  if (!data.issuer.name) {
+    warnings.push("Could not identify issuer name");
+    score -= 20;
+  }
+
+  if (!data.issuer.cnpj) {
+    warnings.push("Could not identify issuer CNPJ");
+    score -= 15;
+  }
+
+  if (!data.issuer.address) {
+    warnings.push("Could not identify issuer address");
+    score -= 10;
+  }
+
+  if (data.items.length === 0) {
+    warnings.push("Could not extract any receipt items");
+    score -= 35;
+  }
+
+  if (
+    data.totals.itemsCount !== null &&
+    data.items.length > 0 &&
+    data.items.length !== data.totals.itemsCount
+  ) {
+    warnings.push(
+      "Extracted items count does not match receipt total items count"
+    );
+    score -= 20;
+  }
+
+  if (data.totals.totalAmount == null && data.totals.amountToPay == null) {
+    warnings.push("Could not identify receipt totals");
+    score -= 15;
+  }
+
+  if (data.payments.length === 0) {
+    warnings.push("Could not identify any payment method");
+    score -= 5;
+  }
+
+  if (!data.receiptInfo.issuedAt) {
+    warnings.push("Could not identify receipt issue date");
+    score -= 10;
+  }
+
+  if (!data.receiptInfo.accessKey) {
+    warnings.push("Could not identify receipt access key");
+    score -= 10;
+  }
+
+  return {
+    confidenceScore: Math.max(0, score),
+    warnings,
+  };
+}
+
 export function parseSpNfceHtml(html: string): ParsedSpReceiptPage {
   const $ = cheerio.load(html);
 
@@ -497,24 +569,37 @@ export function parseSpNfceHtml(html: string): ParsedSpReceiptPage {
 
   const payments = extractPayments(normalizedText);
 
+  const receiptInfo = {
+    number,
+    series,
+    issuedAt,
+    protocol,
+    accessKey,
+    environment,
+  };
+
+  const totals = {
+    itemsCount,
+    totalAmount,
+    discountsAmount,
+    amountToPay,
+    changeAmount,
+  };
+
+  const parsing = buildParsingDiagnostics({
+    issuer,
+    items,
+    totals,
+    payments,
+    receiptInfo,
+  });
+
   return {
     issuer,
     items,
-    totals: {
-      itemsCount,
-      totalAmount,
-      discountsAmount,
-      amountToPay,
-      changeAmount,
-    },
+    totals,
     payments,
-    receiptInfo: {
-      number,
-      series,
-      issuedAt,
-      protocol,
-      accessKey,
-      environment,
-    },
+    receiptInfo,
+    parsing,
   };
 }
