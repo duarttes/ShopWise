@@ -8,6 +8,7 @@
  */
 
 import { prisma } from "../infra/prisma";
+import { extractBrandFromProductName } from "./extract-brand-from-product-name";
 import { normalizeProductName } from "./normalize-product-name";
 import { resolveProductByName } from "./resolve-product-by-name";
 
@@ -37,7 +38,13 @@ export async function resolveOrCreateProductByName({
    * if normalization returns an empty string, keep a minimally safe version.
    */
   const safeNormalizedName =
-    normalizedName || rawName.trim().toLowerCase().replace(/\s+/g, " ");
+    normalizedName ||
+    rawName
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+
+  const inferredBrand = extractBrandFromProductName(rawName);
 
   const createdProduct = await prisma.product.create({
     data: {
@@ -45,7 +52,7 @@ export async function resolveOrCreateProductByName({
       normalizedName: safeNormalizedName,
       unit: unit ?? undefined,
       category: null,
-      brand: null,
+      brand: inferredBrand,
     },
   });
 

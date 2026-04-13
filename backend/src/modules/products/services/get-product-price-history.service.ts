@@ -8,6 +8,18 @@
 import { AppError } from "../../../shared/errors/app-error";
 import { ProductsRepository } from "../repositories/products.repository";
 
+type PriceHistoryEntry = {
+  id: string;
+  price: number;
+  observedAt: Date;
+  market: {
+    id: string;
+    name: string;
+    city: string | null;
+    state: string | null;
+  };
+};
+
 export class GetProductPriceHistoryService {
   constructor(private productsRepository: ProductsRepository) {}
 
@@ -20,7 +32,7 @@ export class GetProductPriceHistoryService {
       throw new AppError("Product not found", 404);
     }
 
-    const history = product.priceRecords.map((record) => ({
+    const history: PriceHistoryEntry[] = product.priceRecords.map((record) => ({
       id: record.id,
       price: record.price,
       observedAt: record.observedAt,
@@ -54,17 +66,20 @@ export class GetProductPriceHistoryService {
       };
     }
 
-    const prices = history.map((entry) => entry.price);
+    const prices: number[] = history.map((entry: PriceHistoryEntry) => entry.price);
     const latestEntry = history[history.length - 1];
     const lowestPrice = Math.min(...prices);
     const highestPrice = Math.max(...prices);
     const averagePrice =
       Math.round(
-        (prices.reduce((total, current) => total + current, 0) / prices.length) *
+        (prices.reduce((total: number, current: number) => total + current, 0) /
+          prices.length) *
           100
       ) / 100;
 
-    const uniqueMarkets = new Set(history.map((entry) => entry.market.id));
+    const uniqueMarkets = new Set(
+      history.map((entry: PriceHistoryEntry) => entry.market.id)
+    );
 
     return {
       product: {

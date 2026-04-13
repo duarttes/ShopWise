@@ -113,4 +113,37 @@ export class ProductsRepository {
       },
     });
   }
+
+  async findMarketComparisonByProductId(productId: string) {
+    return prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        id: true,
+        name: true,
+        normalizedName: true,
+        brand: true,
+        category: true,
+        unit: true,
+        priceRecords: {
+          orderBy: {
+            observedAt: "desc",
+          },
+          select: {
+            id: true,
+            price: true,
+            observedAt: true,
+            market: {
+              select: {
+                id: true,
+                name: true,
+                displayName: true,
+                city: true,
+                state: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
 }
