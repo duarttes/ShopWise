@@ -44,4 +44,30 @@
  *       404:
  *         description: Product not found
  */
+
+/**
+ * @swagger
+ * /analytics/users/{userId}/home-insights:
+ *   get:
+ *     summary: Get a compact home dashboard for the authenticated user
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User id
+ *     responses:
+ *       200:
+ *         description: User home insights retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: User not found
+ */
 export {};

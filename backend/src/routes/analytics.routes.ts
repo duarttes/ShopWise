@@ -7,6 +7,7 @@
 import { Router } from "express";
 import { getProductLatestPricesController } from "../modules/analytics/controllers/get-product-latest-prices.controller";
 import { getProductPriceHistoryController } from "../modules/analytics/controllers/get-product-price-history.controller";
+import { getUserHomeInsightsController } from "../modules/analytics/controllers/get-user-home-insights.controller";
 import { getUserMonthlySpendingController } from "../modules/analytics/controllers/get-user-monthly-spending.controller";
 import { getUserMostExpensiveProductsController } from "../modules/analytics/controllers/get-user-most-expensive-products.controller";
 import { getUserRecentReceiptsController } from "../modules/analytics/controllers/get-user-recent-receipts.controller";
@@ -26,6 +27,12 @@ analyticsRoutes.get(
 analyticsRoutes.get(
   "/products/:productId/latest-prices",
   getProductLatestPricesController
+);
+
+analyticsRoutes.get(
+  "/users/:userId/home-insights",
+  ensureAuthenticated,
+  getUserHomeInsightsController
 );
 
 analyticsRoutes.get(
