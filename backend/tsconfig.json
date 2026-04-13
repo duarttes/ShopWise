@@ -5,11 +5,13 @@
     "moduleResolution": "node",
     "rootDir": "./src",
     "outDir": "./dist",
+
     "strict": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "src/shared/types"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "tests", "prisma.config.ts"]
 }

@@ -11,6 +11,7 @@
  * - indicate which products already exist
  * - indicate which products would be auto-created
  * - detect duplicate receipt by access key when possible
+ * - expose parser confidence and warnings
  */
 
 import { AppError } from "../../../shared/errors/app-error";
@@ -100,6 +101,15 @@ export class PreviewSpReceiptImportService {
       (item) => item.productResolution.status === "will_auto_create"
     ).length;
 
+    const confidenceScore = parsedReceipt.parsing.confidenceScore;
+
+    const importReadiness =
+      confidenceScore >= 80
+        ? "ready"
+        : confidenceScore >= 60
+        ? "warning"
+        : "blocked";
+
     return {
       user,
       importSource: {
@@ -116,6 +126,7 @@ export class PreviewSpReceiptImportService {
         totals: parsedReceipt.totals,
         payments: parsedReceipt.payments,
         receiptInfo: parsedReceipt.receiptInfo,
+        parsing: parsedReceipt.parsing,
         itemsCount: parsedReceipt.items.length,
         items: resolvedItems,
       },
@@ -124,7 +135,12 @@ export class PreviewSpReceiptImportService {
         autoCreateItemsCount,
         totalItems: resolvedItems.length,
       },
+      importDecision: {
+        readiness: importReadiness,
+        confidenceScore,
+      },
       warnings: [
+        ...parsedReceipt.parsing.warnings,
         ...(existingReceipt ? ["This receipt appears to have already been imported."] : []),
         ...(autoCreateItemsCount > 0
           ? [
