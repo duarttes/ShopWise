@@ -12,6 +12,37 @@ import { ReceiptsRepository } from "../../receipts/repositories/receipts.reposit
 import { ImportSpReceiptInput } from "../schemas/import-sp-receipt.schema";
 import { FetchSpReceiptService } from "./fetch-sp-receipt.service";
 
+function parseBrazilianDateTimeToIso(value?: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const match = value.match(
+    /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const [, day, month, year, hours, minutes, seconds] = match;
+
+  const date = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hours),
+    Number(minutes),
+    Number(seconds)
+  );
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
+}
+
 export class ImportSpReceiptService {
   async execute(data: ImportSpReceiptInput) {
     const user = await prisma.user.findUnique({
@@ -51,9 +82,6 @@ export class ImportSpReceiptService {
       }
     }
 
-    const receiptsRepository = new ReceiptsRepository();
-    const createReceiptService = new CreateReceiptService(receiptsRepository);
-
     const validItems = parsedReceipt.items
       .filter((item) => item.unitPrice !== null)
       .map((item) => ({
@@ -68,17 +96,19 @@ export class ImportSpReceiptService {
       throw new AppError("No valid receipt items were found for import", 400);
     }
 
-    const purchasedAt = parsedReceipt.receiptInfo.issuedAt
-      ? new Date(parsedReceipt.receiptInfo.issuedAt).toISOString()
-      : new Date().toISOString();
+    const purchasedAt =
+      parseBrazilianDateTimeToIso(parsedReceipt.receiptInfo.issuedAt) ??
+      new Date().toISOString();
 
     const totalAmount =
-      parsedReceipt.totals.amountToPay ??
-      parsedReceipt.totals.totalAmount;
+      parsedReceipt.totals.amountToPay ?? parsedReceipt.totals.totalAmount;
 
     if (totalAmount == null) {
       throw new AppError("Could not determine receipt total amount", 400);
     }
+
+    const receiptsRepository = new ReceiptsRepository();
+    const createReceiptService = new CreateReceiptService(receiptsRepository);
 
     const result = await createReceiptService.execute({
       userId: data.userId,
