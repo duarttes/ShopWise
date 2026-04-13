@@ -4,12 +4,14 @@
  * Represents a single line item inside a receipt creation request.
  */
 export interface CreateReceiptItemDTO {
-  nameRaw: string;
-  unit?: string;
-  quantity?: number;
+  description: string;
+  quantity: number;
   unitPrice: number;
-  totalPrice?: number;
-  productId?: string;
+  totalPrice: number;
+  unit?: string | null;
+  productCode?: string | null;
+  ean?: string | null;
+  categoryHint?: string | null;
 }
 
 /**
@@ -29,6 +31,12 @@ export interface CreateReceiptMarketDTO {
   longitude?: number;
 }
 
+
+export interface CreateReceiptPaymentDTO {
+  method: string;
+  amount: number;
+}
+
 /**
  * CreateReceiptDTO
  *
@@ -40,6 +48,8 @@ export interface CreateReceiptDTO {
   sourceType?: "MANUAL" | "QR_CODE" | "IMPORTED";
   totalAmount: number;
   purchasedAt: string;
+  parsingScore?: number | null;
+  parsingWarnings?: string[];
   market: {
     name: string;
     displayName?: string;

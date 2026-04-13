@@ -7,6 +7,7 @@
 
 import { Prisma } from "../../../../generated/prisma/client";
 import { prisma } from "../../../shared/infra/prisma";
+import { CreateReceiptDTO } from "../dtos/create-receipt.dto";
 
 export class ReceiptsRepository {
   async create(data: Prisma.ReceiptCreateInput) {
@@ -18,6 +19,8 @@ export class ReceiptsRepository {
             id: true,
             name: true,
             email: true,
+            parsingScore: true,
+            parsingWarnings: true,
             createdAt: true,
             updatedAt: true,
           },

@@ -157,6 +157,8 @@ export class CreateReceiptService {
       sourceType: data.sourceType ?? "MANUAL",
       totalAmount: data.totalAmount,
       purchasedAt: new Date(data.purchasedAt),
+      parsingScore: data.parsingScore,
+      parsingWarnings: data.parsingWarnings,
       items: {
         create: resolvedItems.map((item) => ({
           nameRaw: item.nameRaw,

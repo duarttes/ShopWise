@@ -72,6 +72,8 @@ model Receipt {
   sourceType    ReceiptSource @default(MANUAL)
   totalAmount   Float
   purchasedAt   DateTime
+  parsingScore   Float?
+  parsingWarnings String[]    @default([])
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
