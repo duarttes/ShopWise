@@ -9,7 +9,7 @@ import { Request, Response } from "express";
 import { buildSuccessResponse } from "../../../shared/utils/api-response";
 import { ensureSameUser } from "../../../shared/utils/authorization";
 import { importSpReceiptSchema } from "../schemas/import-sp-receipt.schema";
-import { PreviewSpReceiptImportService } from "../services/import-sp-receipt.service";
+import { ImportSpReceiptService } from "../services/import-sp-receipt.service";
 
 export async function importSpReceiptController(
   request: Request,
@@ -19,7 +19,7 @@ export async function importSpReceiptController(
 
   ensureSameUser(request.user!.id, data.userId);
 
-  const importSpReceiptService = new PreviewSpReceiptImportService();
+  const importSpReceiptService = new ImportSpReceiptService();
   const result = await importSpReceiptService.execute(data);
 
   return response.status(201).json(
