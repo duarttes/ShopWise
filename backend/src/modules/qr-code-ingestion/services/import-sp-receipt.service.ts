@@ -96,9 +96,11 @@ export class ImportSpReceiptService {
       throw new AppError("No valid receipt items were found for import", 400);
     }
 
-    const purchasedAt =
-      parseBrazilianDateTimeToIso(parsedReceipt.receiptInfo.issuedAt) ??
-      new Date().toISOString();
+    const purchasedAt = parseBrazilianDateTimeToIso(parsedReceipt.receiptInfo.issuedAt);
+
+    if (!purchasedAt) {
+      throw new AppError("Could not parse receipt issue date", 400);
+    }
 
     const totalAmount =
       parsedReceipt.totals.amountToPay ?? parsedReceipt.totals.totalAmount;
