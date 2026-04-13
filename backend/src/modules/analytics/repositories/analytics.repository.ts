@@ -1,0 +1,142 @@
+/**
+ * AnalyticsRepository
+ *
+ * Handles data queries related to analytics and price intelligence.
+ * This repository focuses on product price history, latest known prices
+ * and user dashboard summary information.
+ */
+
+import { prisma } from "../../../shared/infra/prisma";
+
+interface DateRangeFilter {
+  startDate?: Date;
+  endDate?: Date;
+}
+
+export class AnalyticsRepository {
+  async findProductById(productId: string) {
+    return prisma.product.findUnique({
+      where: { id: productId },
+    });
+  }
+
+  async findProductPriceHistory(productId: string) {
+    return prisma.priceRecord.findMany({
+      where: { productId },
+      include: {
+        market: true,
+        product: true,
+        receiptItem: true,
+      },
+      orderBy: {
+        observedAt: "desc",
+      },
+    });
+  }
+
+  async findLatestPricesByProduct(productId: string) {
+    const priceRecords = await prisma.priceRecord.findMany({
+      where: { productId },
+      include: {
+        market: true,
+        product: true,
+      },
+      orderBy: {
+        observedAt: "desc",
+      },
+    });
+
+    const latestByMarket = new Map<string, (typeof priceRecords)[number]>();
+
+    for (const record of priceRecords) {
+      if (!latestByMarket.has(record.marketId)) {
+        latestByMarket.set(record.marketId, record);
+      }
+    }
+
+    return Array.from(latestByMarket.values()).sort((a, b) => a.price - b.price);
+  }
+
+  async findUserById(userId: string) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+    });
+  }
+
+  async findUserReceipts(userId: string, filters?: DateRangeFilter) {
+    return prisma.receipt.findMany({
+      where: {
+        userId,
+        purchasedAt: {
+          gte: filters?.startDate,
+          lte: filters?.endDate,
+        },
+      },
+      include: {
+        market: true,
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+      orderBy: {
+        purchasedAt: "desc",
+      },
+    });
+  }
+
+  async findRecentUserReceipts(
+    userId: string,
+    take = 10,
+    filters?: DateRangeFilter
+  ) {
+    return prisma.receipt.findMany({
+      where: {
+        userId,
+        purchasedAt: {
+          gte: filters?.startDate,
+          lte: filters?.endDate,
+        },
+      },
+      include: {
+        market: true,
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+      orderBy: {
+        purchasedAt: "desc",
+      },
+      take,
+    });
+  }
+
+  async findUserReceiptItems(userId: string, filters?: DateRangeFilter) {
+    return prisma.receiptItem.findMany({
+      where: {
+        receipt: {
+          userId,
+          purchasedAt: {
+            gte: filters?.startDate,
+            lte: filters?.endDate,
+          },
+        },
+        productId: {
+          not: null,
+        },
+        product: {
+          category: {
+            not: null,
+          },
+        },
+      },
+      include: {
+        product: true,
+        receipt: true,
+      },
+    });
+  }
+}
