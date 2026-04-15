@@ -9,11 +9,12 @@ import { createReceiptController } from "../modules/receipts/controllers/create-
 import { getReceiptByIdController } from "../modules/receipts/controllers/get-receipt-by-id.controller";
 import { listReceiptsController } from "../modules/receipts/controllers/list-receipts.controller";
 import { ensureAuthenticated } from "../shared/middlewares/ensure-authenticated.middleware";
-
+import { ImportFromNfceController } from '../modules/receipts/controllers/import-from-nfce.controller';
 const receiptsRoutes = Router();
 
 receiptsRoutes.post("/", ensureAuthenticated, createReceiptController);
 receiptsRoutes.get("/", ensureAuthenticated, listReceiptsController);
 receiptsRoutes.get("/:id", ensureAuthenticated, getReceiptByIdController);
+receiptsRoutes.post("/import-from-nfce", ensureAuthenticated, new ImportFromNfceController().handle);
 
 export default receiptsRoutes;
