@@ -10,7 +10,7 @@ interface ImportParsedReceiptResult {
 }
 
 interface PurchasesImportGateway {
-  importParsedReceipt(receipt: ParsedReceipt): Promise<ImportParsedReceiptResult>;
+  importParsedReceipt(receipt: ParsedReceipt, userId: string): Promise<ImportParsedReceiptResult>;
 }
 
 interface ExecuteResponse {
@@ -62,8 +62,10 @@ export class ImportFromNfceService {
       };
     }
 
-    const importedPurchase =
-      await this.purchasesImportGateway.importParsedReceipt(receipt);
+    const importedPurchase = await this.purchasesImportGateway.importParsedReceipt(
+      receipt,
+      payload.userId,
+    );
 
     return {
       receipt,

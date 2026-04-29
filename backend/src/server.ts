@@ -5,6 +5,7 @@
  * Application configuration belongs in app.ts.
  */
 import 'reflect-metadata';
+import './shared/container';
 import app from "./app";
 
 
