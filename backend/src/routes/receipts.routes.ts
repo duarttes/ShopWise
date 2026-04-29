@@ -15,6 +15,6 @@ const receiptsRoutes = Router();
 receiptsRoutes.post("/", ensureAuthenticated, createReceiptController);
 receiptsRoutes.get("/", ensureAuthenticated, listReceiptsController);
 receiptsRoutes.get("/:id", ensureAuthenticated, getReceiptByIdController);
-receiptsRoutes.post("/import-from-nfce", ensureAuthenticated, new ImportFromNfceController().handle);
+receiptsRoutes.post("/import-from-nfce", new ImportFromNfceController().handle);
 
 export default receiptsRoutes;
