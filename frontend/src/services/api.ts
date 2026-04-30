@@ -77,3 +77,16 @@ export async function importNfce(url: string) {
 
   return response.json();
 }
+
+export async function getHomeInsights(userId: string) {
+  const response = await fetch(`${API_URL}/analytics/users/${userId}/home-insights`, {
+    headers: authHeaders(),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || 'Erro ao buscar insights');
+  }
+
+  return response.json();
+}
