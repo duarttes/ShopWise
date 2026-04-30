@@ -3,8 +3,8 @@ import { container } from 'tsyringe';
 import { NfceProvider } from '../../modules/receipts/providers/nfce-provider';
 import { SpNfceProvider } from '../../modules/receipts/providers/sp-nfce.provider';
 import { ParsedReceipt } from '../../modules/receipts/domain/parsed-receipt';
-import { CreateReceiptService } from '../../modules/receipts/services/create-receipt.service';
 import { ReceiptsRepository } from '../../modules/receipts/repositories/receipts.repository';
+import { CreateReceiptService } from '../../modules/receipts/services/create-receipt.service';
 
 class PurchasesImportGatewayImpl {
   async importParsedReceipt(receipt: ParsedReceipt, userId: string): Promise<{ id: string }> {
