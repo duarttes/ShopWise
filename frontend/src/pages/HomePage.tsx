@@ -1,28 +1,56 @@
 import { useEffect, useState } from 'react';
-import { getHomeInsights, getStoredUserId } from '../services/api';
+import { getHomeInsights, updateLocation, getStoredUserId } from '../services/api';
 
 export function HomePage() {
   const [insights, setInsights] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locMsg, setLocMsg] = useState<string | null>(null);
 
   const userId = getStoredUserId();
 
   useEffect(() => {
     if (!userId) return;
-
     getHomeInsights(userId)
       .then((res) => setInsights(res.data))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [userId]);
 
+  async function handleSaveLocation() {
+    if (!navigator.geolocation) {
+      setLocMsg('Geolocalização não suportada neste dispositivo.');
+      return;
+    }
+
+    setLocating(true);
+    setLocMsg(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          await updateLocation(pos.coords.latitude, pos.coords.longitude);
+          setLocMsg('Localização salva!');
+        } catch {
+          setLocMsg('Erro ao salvar localização.');
+        } finally {
+          setLocating(false);
+        }
+      },
+      () => {
+        setLocMsg('Permissão de localização negada.');
+        setLocating(false);
+      }
+    );
+  }
+
   if (loading) return <div className="p-4">Carregando...</div>;
   if (error) return <div className="p-4 text-red-500">{error}</div>;
   if (!insights) return null;
 
   return (
-    <div className="max-w-xl mx-auto p-4 space-y-4">
+    <div className="max-w-xl mx-auto p-4 space-y-4 pb-20">
       <h2 className="text-xl font-bold">Este mês</h2>
 
       <div className="grid grid-cols-3 gap-3">
@@ -66,6 +94,25 @@ export function HomePage() {
           </div>
         </div>
       )}
+
+      <div className="border rounded-xl p-3 space-y-2">
+        <div className="text-sm font-semibold">Minha localização</div>
+        <p className="text-xs text-gray-500">
+          Salve sua localização para receber recomendações de mercados próximos.
+        </p>
+        <button
+          onClick={handleSaveLocation}
+          disabled={locating}
+          className="w-full bg-black text-white p-2 rounded-xl text-sm disabled:opacity-50"
+        >
+          {locating ? 'Obtendo localização...' : '📍 Usar minha localização atual'}
+        </button>
+        {locMsg && (
+          <div className={`text-xs ${locMsg.includes('salva') ? 'text-green-600' : 'text-red-500'}`}>
+            {locMsg}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

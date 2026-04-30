@@ -24,6 +24,24 @@ function authHeaders(): HeadersInit {
   };
 }
 
+async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...authHeaders(),
+      ...(options.headers ?? {}),
+    },
+  });
+
+  if (response.status === 401) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    window.location.reload();
+  }
+
+  return response;
+}
+
 export async function login(email: string, password: string) {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
@@ -46,9 +64,8 @@ export async function previewNfce(url: string) {
   const userId = getStoredUserId();
   if (!userId) throw new Error('Usuário não autenticado.');
 
-  const response = await fetch(`${API_URL}/qr-codes/preview-sp-receipt-import`, {
+  const response = await apiFetch(`${API_URL}/qr-codes/preview-sp-receipt-import`, {
     method: 'POST',
-    headers: authHeaders(),
     body: JSON.stringify({ userId, url }),
   });
 
@@ -64,9 +81,8 @@ export async function importNfce(url: string) {
   const userId = getStoredUserId();
   if (!userId) throw new Error('Usuário não autenticado.');
 
-  const response = await fetch(`${API_URL}/qr-codes/import-sp-receipt`, {
+  const response = await apiFetch(`${API_URL}/qr-codes/import-sp-receipt`, {
     method: 'POST',
-    headers: authHeaders(),
     body: JSON.stringify({ userId, url }),
   });
 
@@ -79,9 +95,7 @@ export async function importNfce(url: string) {
 }
 
 export async function getHomeInsights(userId: string) {
-  const response = await fetch(`${API_URL}/analytics/users/${userId}/home-insights`, {
-    headers: authHeaders(),
-  });
+  const response = await apiFetch(`${API_URL}/analytics/users/${userId}/home-insights`);
 
   if (!response.ok) {
     const text = await response.text();
@@ -92,17 +106,14 @@ export async function getHomeInsights(userId: string) {
 }
 
 export async function getShoppingLists(userId: string) {
-  const response = await fetch(`${API_URL}/users/${userId}/shopping-lists`, {
-    headers: authHeaders(),
-  });
+  const response = await apiFetch(`${API_URL}/users/${userId}/shopping-lists`);
   if (!response.ok) throw new Error('Erro ao buscar listas');
   return response.json();
 }
 
 export async function createShoppingList(userId: string, name: string) {
-  const response = await fetch(`${API_URL}/shopping-lists`, {
+  const response = await apiFetch(`${API_URL}/shopping-lists`, {
     method: 'POST',
-    headers: authHeaders(),
     body: JSON.stringify({ userId, name }),
   });
   if (!response.ok) throw new Error('Erro ao criar lista');
@@ -110,9 +121,8 @@ export async function createShoppingList(userId: string, name: string) {
 }
 
 export async function addShoppingListItem(listId: string, name: string, quantity?: number) {
-  const response = await fetch(`${API_URL}/shopping-lists/${listId}/items`, {
+  const response = await apiFetch(`${API_URL}/shopping-lists/${listId}/items`, {
     method: 'POST',
-    headers: authHeaders(),
     body: JSON.stringify({ name, quantity }),
   });
   if (!response.ok) throw new Error('Erro ao adicionar item');
@@ -120,19 +130,26 @@ export async function addShoppingListItem(listId: string, name: string, quantity
 }
 
 export async function removeShoppingListItem(listId: string, itemId: string) {
-  const response = await fetch(`${API_URL}/shopping-lists/${listId}/items/${itemId}`, {
+  const response = await apiFetch(`${API_URL}/shopping-lists/${listId}/items/${itemId}`, {
     method: 'DELETE',
-    headers: authHeaders(),
   });
   if (!response.ok) throw new Error('Erro ao remover item');
   return response.json();
 }
 
 export async function getRecommendation(listId: string) {
-  const response = await fetch(
-    `${API_URL}/shopping-lists/${listId}/multi-market-recommendation`,
-    { headers: authHeaders() }
+  const response = await apiFetch(
+    `${API_URL}/shopping-lists/${listId}/multi-market-recommendation`
   );
   if (!response.ok) throw new Error('Erro ao buscar recomendação');
+  return response.json();
+}
+
+export async function updateLocation(latitude: number, longitude: number) {
+  const response = await apiFetch(`${API_URL}/users/me/location`, {
+    method: 'PATCH',
+    body: JSON.stringify({ homeLatitude: latitude, homeLongitude: longitude }),
+  });
+  if (!response.ok) throw new Error('Erro ao salvar localização');
   return response.json();
 }
