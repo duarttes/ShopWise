@@ -16,7 +16,7 @@ export function saveUserId(userId: string): void {
   localStorage.setItem('userId', userId);
 }
 
-async function authHeaders(): Promise<HeadersInit> {
+function authHeaders(): HeadersInit {
   const token = getToken();
   return {
     'Content-Type': 'application/json',
@@ -42,27 +42,37 @@ export async function login(email: string, password: string) {
   return data;
 }
 
-export async function importNfce(payload: {
-  rawText?: string;
-  url?: string;
-  accessKey?: string;
-  confirmImport?: boolean;
-}) {
+export async function previewNfce(url: string) {
   const userId = getStoredUserId();
+  if (!userId) throw new Error('Usuário não autenticado.');
 
-  if (!userId) {
-    throw new Error('Usuário não autenticado.');
-  }
-
-  const response = await fetch(`${API_URL}/receipts/import-from-nfce`, {
+  const response = await fetch(`${API_URL}/qr-codes/preview-sp-receipt-import`, {
     method: 'POST',
-    headers: await authHeaders(),
-    body: JSON.stringify({ ...payload, userId }),
+    headers: authHeaders(),
+    body: JSON.stringify({ userId, url }),
   });
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || 'Erro na API');
+    throw new Error(text || 'Erro ao buscar prévia da nota');
+  }
+
+  return response.json();
+}
+
+export async function importNfce(url: string) {
+  const userId = getStoredUserId();
+  if (!userId) throw new Error('Usuário não autenticado.');
+
+  const response = await fetch(`${API_URL}/qr-codes/import-sp-receipt`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ userId, url }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || 'Erro ao importar nota');
   }
 
   return response.json();

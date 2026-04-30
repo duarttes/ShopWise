@@ -1,13 +1,6 @@
-/**
- * Server entry point.
- *
- * This file is responsible only for starting the HTTP server.
- * Application configuration belongs in app.ts.
- */
 import 'reflect-metadata';
 import './shared/container';
 import app from "./app";
-
 
 const port = Number(process.env.PORT || 3333);
 

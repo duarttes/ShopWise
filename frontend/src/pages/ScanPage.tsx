@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { importNfce, login, getStoredUserId } from '../services/api';
+import { previewNfce, importNfce, login, getStoredUserId } from '../services/api';
 import { ReceiptPreviewCard } from '../components/ReceiptPreviewCard';
 
 export function ScanPage() {
@@ -8,10 +8,11 @@ export function ScanPage() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  const [value, setValue] = useState('');
-  const [data, setData] = useState<any>(null);
+  const [url, setUrl] = useState('');
+  const [preview, setPreview] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleLogin() {
@@ -28,8 +29,10 @@ export function ScanPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await importNfce({ rawText: value });
-      setData(res);
+      setPreview(null);
+      setImported(false);
+      const res = await previewNfce(url);
+      setPreview(res.data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -40,9 +43,9 @@ export function ScanPage() {
   async function handleImport() {
     try {
       setImporting(true);
-      const res = await importNfce({ rawText: value, confirmImport: true });
-      alert('Compra importada!');
-      console.log(res);
+      await importNfce(url);
+      setImported(true);
+      setPreview(null);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -53,7 +56,7 @@ export function ScanPage() {
   if (!userId) {
     return (
       <div className="max-w-xl mx-auto p-4 space-y-4">
-        <h1 className="text-2xl font-bold">ShopWise — Login</h1>
+        <h1 className="text-2xl font-bold">ShopWise</h1>
         <input
           type="email"
           value={email}
@@ -68,10 +71,7 @@ export function ScanPage() {
           placeholder="Senha"
           className="w-full border rounded-xl p-3"
         />
-        <button
-          onClick={handleLogin}
-          className="w-full bg-black text-white p-3 rounded-xl"
-        >
+        <button onClick={handleLogin} className="w-full bg-black text-white p-3 rounded-xl">
           Entrar
         </button>
         {loginError && <div className="text-red-500">{loginError}</div>}
@@ -83,26 +83,31 @@ export function ScanPage() {
     <div className="max-w-xl mx-auto p-4 space-y-4">
       <h1 className="text-2xl font-bold">ShopWise</h1>
 
-      <textarea
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="Cole o QR code ou chave"
+      <input
+        type="text"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="Cole a URL do QR code da NFC-e"
         className="w-full border rounded-xl p-3"
       />
 
       <button
         onClick={handlePreview}
-        className="w-full bg-black text-white p-3 rounded-xl"
+        disabled={loading || !url}
+        className="w-full bg-black text-white p-3 rounded-xl disabled:opacity-50"
       >
-        {loading ? 'Lendo...' : 'Ler NFC-e'}
+        {loading ? 'Buscando...' : 'Ver prévia'}
       </button>
 
       {error && <div className="text-red-500">{error}</div>}
 
-      {data?.receipt && (
+      {imported && (
+        <div className="text-green-600 font-medium">Nota importada com sucesso!</div>
+      )}
+
+      {preview && (
         <ReceiptPreviewCard
-          receipt={data.receipt}
-          warnings={data.warnings}
+          preview={preview}
           onConfirm={handleImport}
           loading={importing}
         />

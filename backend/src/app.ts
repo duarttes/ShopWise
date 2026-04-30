@@ -1,14 +1,4 @@
-/**
- * Express application setup.
- *
- * Responsibilities:
- * - initialize Express
- * - register middlewares
- * - expose Swagger
- * - register application routes
- * - register the global error handler
- */
-
+import 'reflect-metadata';
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
@@ -22,20 +12,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-/**
- * Swagger documentation endpoint.
- * Access it at /docs after the server starts.
- */
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+//app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-/**
- * Application routes.
- */
 app.use(routes);
 
-/**
- * Global error handler must be registered after routes.
- */
 app.use(errorHandler);
 
 export default app;

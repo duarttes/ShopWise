@@ -1,5 +1,5 @@
 export interface ImportFromNfceDTO {
-  userID: string;
+  userId: string;
   rawText?: string;
   url?: string;
   accessKey?: string;
