@@ -153,3 +153,11 @@ export async function updateLocation(latitude: number, longitude: number) {
   if (!response.ok) throw new Error('Erro ao salvar localização');
   return response.json();
 }
+
+export async function getRecentReceipts(userId: string) {
+  const response = await apiFetch(
+    `${API_URL}/analytics/users/${userId}/recent-receipts`
+  );
+  if (!response.ok) throw new Error('Erro ao buscar notas');
+  return response.json();
+}

@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { ScanPage } from './pages/ScanPage';
 import { HomePage } from './pages/HomePage';
 import { ShoppingListsPage } from './pages/ShoppingListsPage';
+import { ReceiptsPage } from './pages/ReceiptsPage';
 import { getStoredUserId } from './services/api';
 
 function App() {
-  const [tab, setTab] = useState<'home' | 'scan' | 'lists'>('home');
+  const [tab, setTab] = useState<'home' | 'receipts' | 'scan' | 'lists'>('home');
   const userId = getStoredUserId();
 
   if (!userId) return <ScanPage />;
@@ -14,6 +15,7 @@ function App() {
     <div>
       <div className="max-w-xl mx-auto">
         {tab === 'home' && <HomePage />}
+        {tab === 'receipts' && <ReceiptsPage />}
         {tab === 'scan' && <ScanPage />}
         {tab === 'lists' && <ShoppingListsPage />}
       </div>
@@ -24,6 +26,12 @@ function App() {
           className={`flex-1 p-4 text-sm ${tab === 'home' ? 'font-bold' : 'text-gray-500'}`}
         >
           Início
+        </button>
+        <button
+          onClick={() => setTab('receipts')}
+          className={`flex-1 p-4 text-sm ${tab === 'receipts' ? 'font-bold' : 'text-gray-500'}`}
+        >
+          Notas
         </button>
         <button
           onClick={() => setTab('scan')}
