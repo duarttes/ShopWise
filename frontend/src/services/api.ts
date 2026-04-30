@@ -90,3 +90,40 @@ export async function getHomeInsights(userId: string) {
 
   return response.json();
 }
+
+export async function getShoppingLists(userId: string) {
+  const response = await fetch(`${API_URL}/users/${userId}/shopping-lists`, {
+    headers: authHeaders(),
+  });
+  if (!response.ok) throw new Error('Erro ao buscar listas');
+  return response.json();
+}
+
+export async function createShoppingList(userId: string, name: string) {
+  const response = await fetch(`${API_URL}/shopping-lists`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ userId, name }),
+  });
+  if (!response.ok) throw new Error('Erro ao criar lista');
+  return response.json();
+}
+
+export async function addShoppingListItem(listId: string, name: string, quantity?: number) {
+  const response = await fetch(`${API_URL}/shopping-lists/${listId}/items`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ name, quantity }),
+  });
+  if (!response.ok) throw new Error('Erro ao adicionar item');
+  return response.json();
+}
+
+export async function removeShoppingListItem(listId: string, itemId: string) {
+  const response = await fetch(`${API_URL}/shopping-lists/${listId}/items/${itemId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok) throw new Error('Erro ao remover item');
+  return response.json();
+}
