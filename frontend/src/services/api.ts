@@ -127,3 +127,12 @@ export async function removeShoppingListItem(listId: string, itemId: string) {
   if (!response.ok) throw new Error('Erro ao remover item');
   return response.json();
 }
+
+export async function getRecommendation(listId: string) {
+  const response = await fetch(
+    `${API_URL}/shopping-lists/${listId}/multi-market-recommendation`,
+    { headers: authHeaders() }
+  );
+  if (!response.ok) throw new Error('Erro ao buscar recomendação');
+  return response.json();
+}

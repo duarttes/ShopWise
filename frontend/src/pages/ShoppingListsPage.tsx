@@ -4,6 +4,7 @@ import {
   createShoppingList,
   addShoppingListItem,
   removeShoppingListItem,
+  getRecommendation,
   getStoredUserId,
 } from '../services/api';
 
@@ -14,6 +15,9 @@ export function ShoppingListsPage() {
   const [newListName, setNewListName] = useState('');
   const [newItemName, setNewItemName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [recommendation, setRecommendation] = useState<any>(null);
+  const [loadingRec, setLoadingRec] = useState(false);
+  const [recError, setRecError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLists();
@@ -36,23 +40,43 @@ export function ShoppingListsPage() {
     setNewListName('');
     await fetchLists();
     setSelectedList(res.data);
+    setRecommendation(null);
   }
 
   async function handleAddItem() {
     if (!newItemName.trim() || !selectedList) return;
     await addShoppingListItem(selectedList.id, newItemName.trim());
     setNewItemName('');
-    const res = await getShoppingLists(userId);
-    setLists(res.data);
-    setSelectedList(res.data.find((l: any) => l.id === selectedList.id));
+    setRecommendation(null);
+    await refreshSelected();
   }
 
   async function handleRemoveItem(itemId: string) {
     if (!selectedList) return;
     await removeShoppingListItem(selectedList.id, itemId);
+    setRecommendation(null);
+    await refreshSelected();
+  }
+
+  async function refreshSelected() {
     const res = await getShoppingLists(userId);
     setLists(res.data);
-    setSelectedList(res.data.find((l: any) => l.id === selectedList.id));
+    setSelectedList(res.data.find((l: any) => l.id === selectedList?.id));
+  }
+
+  async function handleGetRecommendation() {
+    if (!selectedList) return;
+    setLoadingRec(true);
+    setRecError(null);
+    setRecommendation(null);
+    try {
+      const res = await getRecommendation(selectedList.id);
+      setRecommendation(res.data);
+    } catch (err: any) {
+      setRecError(err.message);
+    } finally {
+      setLoadingRec(false);
+    }
   }
 
   if (loading) return <div className="p-4">Carregando...</div>;
@@ -68,23 +92,16 @@ export function ShoppingListsPage() {
           placeholder="Nova lista..."
           className="flex-1 border rounded-xl p-2 text-sm"
         />
-        <button
-          onClick={handleCreateList}
-          className="bg-black text-white px-4 rounded-xl text-sm"
-        >
+        <button onClick={handleCreateList} className="bg-black text-white px-4 rounded-xl text-sm">
           Criar
         </button>
       </div>
-
-      {lists.length === 0 && (
-        <div className="text-gray-500 text-sm">Nenhuma lista criada ainda.</div>
-      )}
 
       <div className="flex gap-2 overflow-x-auto">
         {lists.map((list) => (
           <button
             key={list.id}
-            onClick={() => setSelectedList(list)}
+            onClick={() => { setSelectedList(list); setRecommendation(null); }}
             className={`px-3 py-1 rounded-full text-sm whitespace-nowrap border ${
               selectedList?.id === list.id ? 'bg-black text-white' : 'text-gray-600'
             }`}
@@ -104,10 +121,7 @@ export function ShoppingListsPage() {
               className="flex-1 border rounded-xl p-2 text-sm"
               onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
             />
-            <button
-              onClick={handleAddItem}
-              className="bg-black text-white px-4 rounded-xl text-sm"
-            >
+            <button onClick={handleAddItem} className="bg-black text-white px-4 rounded-xl text-sm">
               +
             </button>
           </div>
@@ -121,18 +135,56 @@ export function ShoppingListsPage() {
                 <div>
                   <div className="text-sm font-medium">{item.name}</div>
                   {item.product && (
-                    <div className="text-xs text-gray-500">{item.product.normalizedName}</div>
+                    <div className="text-xs text-green-600">✓ produto vinculado</div>
+                  )}
+                  {!item.product && (
+                    <div className="text-xs text-gray-400">sem produto vinculado</div>
                   )}
                 </div>
-                <button
-                  onClick={() => handleRemoveItem(item.id)}
-                  className="text-red-500 text-sm px-2"
-                >
-                  ✕
-                </button>
+                <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 text-sm px-2">✕</button>
               </div>
             ))}
           </div>
+
+          {selectedList.items?.some((i: any) => i.product) && (
+            <button
+              onClick={handleGetRecommendation}
+              disabled={loadingRec}
+              className="w-full bg-green-600 text-white p-3 rounded-xl disabled:opacity-50 text-sm font-medium"
+            >
+              {loadingRec ? 'Calculando...' : '🛒 Ver onde comprar mais barato'}
+            </button>
+          )}
+
+          {recError && <div className="text-red-500 text-sm">{recError}</div>}
+
+          {recommendation?.recommendedPlan && (
+            <div className="space-y-3">
+              <div className="text-sm font-semibold">Plano recomendado</div>
+              {recommendation.recommendedPlan.markets.map((market: any) => (
+                <div key={market.marketId} className="border rounded-xl p-3 space-y-2">
+                  <div className="font-bold">{market.marketName}</div>
+                  <div className="text-green-600 font-medium">
+                    R$ {market.totalEstimated?.toFixed(2)}
+                  </div>
+                  <div className="space-y-1">
+                    {market.items.map((item: any) => (
+                      <div key={item.shoppingListItemId} className="flex justify-between text-sm text-gray-600">
+                        <span>{item.shoppingListItemName}</span>
+                        <span>R$ {item.price?.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {recommendation.recommendedPlan.missingItemsCount > 0 && (
+                <div className="text-yellow-600 text-sm">
+                  ⚠️ {recommendation.recommendedPlan.missingItemsCount} item(s) sem preço disponível
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
