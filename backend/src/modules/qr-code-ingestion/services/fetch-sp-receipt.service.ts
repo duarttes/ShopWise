@@ -1,19 +1,7 @@
-/**
- * FetchSpReceiptService
- *
- * Fetches the São Paulo NFC-e public consultation page and parses
- * its HTML into a structured ShopWise-friendly payload.
- *
- * MVP note:
- * this service currently supports São Paulo only.
- */
-
 import { AppError } from "../../../shared/errors/app-error";
 import { parseSpNfceQrCode } from "../parsers/sp-nfce-qr-code.parser";
 import { parseSpNfceHtml } from "../parsers/sp-nfce-html.parser";
 import { FetchSpReceiptDTO } from "../dtos/fetch-sp-receipt.dto";
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 
 export class FetchSpReceiptService {
   async execute(data: FetchSpReceiptDTO) {
@@ -38,9 +26,6 @@ export class FetchSpReceiptService {
     if (!html || html.trim().length === 0) {
       throw new AppError("Fetched HTML is empty", 502);
     }
-
-    const debugFilePath = join(process.cwd(), "debug-sp-receipt.html");
-      writeFileSync(debugFilePath, html, "utf-8");
 
     const parsedReceipt = parseSpNfceHtml(html);
 
