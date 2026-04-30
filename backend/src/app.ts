@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import "dotenv/config";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import express from "express";
 import swaggerUi from "swagger-ui-express";
 import routes from "./routes";
@@ -15,6 +17,19 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+app.use(helmet());
+
+app.use(
+  "/auth",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: { success: false, message: "Too many requests, try again later.", issues: null },
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
