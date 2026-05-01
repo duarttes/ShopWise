@@ -51,26 +51,29 @@ const [error, setError] = useState<string | null>(null);
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
           {[
-            { label: 'este mês', value: `R$ ${insights?.month?.totalSpent?.toFixed(2) ?? '0.00'}`, accent: true },
-            { label: 'notas', value: String(insights?.month?.receiptsCount ?? 0), accent: false },
-            { label: 'mercados', value: String(insights?.month?.marketsCount ?? 0), accent: false },
+          { label: 'este mês', value: `R$ ${insights?.month?.totalSpent?.toFixed(2) ?? '0.00'}`, accent: true, warm: false },
+          { label: 'notas', value: String(insights?.month?.receiptsCount ?? 0), accent: false, warm: false },
+          { label: 'mercados', value: String(insights?.month?.marketsCount ?? 0), accent: false, warm: true },
           ].map((item) => (
-            <div key={item.label} style={{
-              background: '#fff',
-              borderRadius: 14,
-              padding: '10px 12px',
-              boxShadow: '0 3px 0 var(--green-muted), 0 5px 12px rgba(80,140,80,0.07)',
+          <div key={item.label} style={{
+            background: 'var(--stat-card-bg)',
+            borderRadius: 14,
+            padding: '10px 12px',
+            border: '1px solid var(--stat-card-border)',
+            boxShadow: 'var(--stat-card-shadow)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              fontFamily: 'Nunito, sans-serif',
+              fontWeight: 900,
+              fontSize: 17,
+              color: item.accent ? 'var(--green-light)' : item.warm ? 'var(--amber-light)' : 'var(--text)',
             }}>
-              <div style={{
-                fontFamily: 'Nunito, sans-serif',
-                fontWeight: 800,
-                fontSize: 17,
-                color: item.accent ? 'var(--green)' : 'var(--text)',
-              }}>
-                {item.value}
-              </div>
-              <div style={{ fontSize: 10, color: 'var(--text-subtle)', marginTop: 2 }}>{item.label}</div>
+              {item.value}
             </div>
+            <div style={{ fontSize: 10, color: 'var(--text-subtle)', marginTop: 2 }}>{item.label}</div>
+          </div>
           ))}
         </div>
       </div>

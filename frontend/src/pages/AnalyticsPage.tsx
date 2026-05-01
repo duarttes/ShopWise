@@ -13,7 +13,7 @@ import { Card, PageHeader, SectionLabel } from '../components/ui';
 import { PageLoading } from '../components/PageLoading';
 import { PageError } from '../components/PageError';
 
-const COLORS = ['#4a9a5a', '#6ab87a', '#8dd4a0', '#b0e8c0', '#c8f0d4', '#347a44', '#1a5a2a'];
+const COLORS = ['#4ab46e', '#e8923a', '#e05050', '#d4b840', '#7ecba1', '#c8984a'];
 
 const monthLabels: Record<string, string> = {
   '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr',
@@ -118,7 +118,11 @@ export function AnalyticsPage() {
                       fontSize: 13,
                     }}
                   />
-                  <Bar dataKey="total" fill="#4a9a5a" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="total" radius={[6, 6, 0, 0]}>
+                    {monthlyData.map((_: any, index: number) => (
+                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </Card>

@@ -4,15 +4,14 @@
 @tailwind utilities;
 
 :root {
-  /* Brand */
   --green: #2d7a4a;
-  --green-light: #5ab87a;
+  --green-light: #4ab46e;
   --green-dark: #1a4028;
   --green-muted: #0e2e1c;
   --amber: #a07840;
   --amber-light: #c8984a;
 
-  /* Light mode (Stone Sand) */
+  /* Light mode */
   --surface: #f5f1ea;
   --surface-2: #ede8df;
   --card: #ffffff;
@@ -24,14 +23,19 @@
   --text-muted: #7a6848;
   --text-subtle: #b0a080;
   --header-bg: linear-gradient(150deg, #f0ebe0 0%, #e8e0d0 100%);
+  --stat-card-bg: #ffffff;
+  --stat-card-border: rgba(120,88,40,0.12);
+  --stat-card-shadow: 0 3px 0 #d4c8b4;
   --insight-bg: rgba(160,120,60,0.07);
   --insight-border: rgba(160,120,60,0.15);
   --nav-bg: #ffffff;
+  --glow-1: radial-gradient(circle, rgba(45,107,69,0.12) 0%, transparent 65%);
+  --glow-2: radial-gradient(circle, rgba(160,120,60,0.09) 0%, transparent 65%);
 }
 
 [data-theme="dark"] {
-  --surface: #111a14;
-  --surface-2: #1e2820;
+  --surface: #0f1a12;
+  --surface-2: #1a2e20;
   --card: rgba(255,255,255,0.05);
   --border: rgba(255,255,255,0.08);
   --border-strong: rgba(255,255,255,0.14);
@@ -40,10 +44,15 @@
   --text: rgba(255,255,255,0.90);
   --text-muted: rgba(255,255,255,0.50);
   --text-subtle: rgba(255,255,255,0.28);
-  --header-bg: linear-gradient(150deg, rgba(45,107,69,0.20) 0%, rgba(30,40,32,0) 70%);
-  --insight-bg: rgba(160,120,60,0.10);
-  --insight-border: rgba(160,120,60,0.20);
-  --nav-bg: rgba(14,22,18,0.98);
+  --header-bg: linear-gradient(150deg, rgba(45,107,69,0.20) 0%, rgba(15,26,18,0) 70%);
+  --stat-card-bg: rgba(255,255,255,0.06);
+  --stat-card-border: rgba(255,255,255,0.10);
+  --stat-card-shadow: none;
+  --insight-bg: rgba(74,180,110,0.08);
+  --insight-border: rgba(74,180,110,0.16);
+  --nav-bg: rgba(10,15,12,0.97);
+  --glow-1: radial-gradient(circle, rgba(74,180,110,0.14) 0%, transparent 65%);
+  --glow-2: radial-gradient(circle, rgba(200,152,74,0.09) 0%, transparent 65%);
 }
 
 * {
@@ -77,5 +86,6 @@ h1, h2, h3 {
   margin: 0 auto;
   min-height: 100dvh;
   background: var(--surface);
-  box-shadow: 0 0 40px rgba(0,0,0,0.10);
+  box-shadow: 0 0 40px rgba(0,0,0,0.12);
+  position: relative;
 }
