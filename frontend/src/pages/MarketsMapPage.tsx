@@ -6,6 +6,7 @@ import { PageHeader, Card, SectionLabel } from '../components/ui';
 import { PageLoading } from '../components/PageLoading';
 import { PageError } from '../components/PageError';
 import 'leaflet/dist/leaflet.css';
+import { updateLocation } from '../services/api';
 
 const greenIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
@@ -24,6 +25,20 @@ export function MarketsMapPage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          await updateLocation(pos.coords.latitude, pos.coords.longitude);
+        } catch {}
+      },
+      undefined,
+      { timeout: 8000, maximumAge: 1000 * 60 * 10 }
+    );
+  }, []);
+
 
   if (loading) return <PageLoading />;
   if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;

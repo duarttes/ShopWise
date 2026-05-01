@@ -24,7 +24,22 @@ export function HomePage() {
   const [importing, setImporting] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [imported, setImported] = useState(false);
-  const hasMonthData = (insights?.month?.totalSpent ?? 0) > 0;
+  const hasMonthData = (insights?.month?.totalSpent ?? 0) > 0 || (insights?.month?.receiptsCount ?? 0) > 0;
+
+  useEffect(() => {
+    if (!userId) return;
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          await updateLocation(pos.coords.latitude, pos.coords.longitude);
+        } catch {}
+      },
+      undefined,
+      { timeout: 8000, maximumAge: 1000 * 60 * 10 } // cache 10 min
+    );
+  }, [userId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -89,20 +104,18 @@ export function HomePage() {
 
   const stats = [
     {
-      label: hasMonthData ? 'este mês' : 'histórico',
-      value: hasMonthData
-        ? `R$ ${insights?.month?.totalSpent?.toFixed(2)}`
-        : `R$ ${insights?.allTime?.totalSpent?.toFixed(2) ?? '0.00'}`,
+      label: 'este mês',
+      value: `R$ ${insights?.month?.totalSpent?.toFixed(2) ?? '0.00'}`,
       color: 'var(--green-light)',
     },
     {
       label: 'notas',
-      value: String(hasMonthData ? insights?.month?.receiptsCount : (insights?.allTime?.receiptsCount ?? 0)),
+      value: String(insights?.month?.receiptsCount ?? 0),
       color: 'var(--text)',
     },
     {
       label: 'mercados',
-      value: String(hasMonthData ? insights?.month?.marketsCount : (insights?.allTime?.marketsCount ?? 0)),
+      value: String(insights?.month?.marketsCount ?? 0),
       color: 'var(--amber-light)',
     },
   ];
@@ -147,6 +160,26 @@ export function HomePage() {
           ))}
         </div>
       </div>
+
+      {!hasMonthData && insights?.topMarket && (
+        <div style={{ padding: '8px 16px 0' }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: 'var(--insight-bg)',
+            border: '1px solid var(--insight-border)',
+            borderRadius: 20,
+            padding: '4px 12px',
+            fontSize: 11,
+            color: 'var(--amber)',
+            fontFamily: 'Nunito',
+            fontWeight: 700,
+          }}>
+            📊 Exibindo dados históricos — sem compras em maio
+          </div>
+        </div>
+      )}
 
       {/* Scan CTA */}
       <div style={{ padding: '16px 16px 0' }}>
@@ -259,23 +292,6 @@ export function HomePage() {
               description="Escaneie sua primeira nota fiscal para ver seus insights aqui."
             />
           )}
-
-        <div>
-          <SectionLabel>Minha localização</SectionLabel>
-          <Card>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
-              Para receber recomendações de mercados próximos.
-            </p>
-            <Button onClick={handleSaveLocation} disabled={locating} variant="secondary" fullWidth>
-              {locating ? 'Obtendo...' : '📍 Usar localização atual'}
-            </Button>
-            {locMsg && (
-              <div style={{ fontSize: 13, marginTop: 8, color: locMsg.includes('✓') ? 'var(--green-light)' : '#ef4444', textAlign: 'center', fontFamily: 'Nunito', fontWeight: 700 }}>
-                {locMsg}
-              </div>
-            )}
-          </Card>
-        </div>
 
       </div>
     </div>
