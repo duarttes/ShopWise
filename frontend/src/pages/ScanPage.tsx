@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { previewNfce, importNfce, login, getStoredUserId } from '../services/api';
 import { ReceiptPreviewCard } from '../components/ReceiptPreviewCard';
 import { QrCodeScanner } from '../components/QrCodeScanner';
+import { Button, Input, Card, PageHeader } from '../components/ui';
 
 export function ScanPage() {
   const [userId, setUserId] = useState<string | null>(getStoredUserId());
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
-
   const [url, setUrl] = useState('');
   const [preview, setPreview] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -22,15 +22,14 @@ export function ScanPage() {
       setLoginError(null);
       const res = await login(email, password);
       setUserId(res.data.user.id);
-    } catch (err: any) {
-      setLoginError(err.message);
+    } catch {
+      setLoginError('Email ou senha incorretos.');
     }
   }
 
   async function handlePreview(scanUrl?: string) {
     const target = scanUrl ?? url;
     if (!target) return;
-
     try {
       setLoading(true);
       setError(null);
@@ -51,6 +50,7 @@ export function ScanPage() {
       await importNfce(url);
       setImported(true);
       setPreview(null);
+      setUrl('');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -66,84 +66,67 @@ export function ScanPage() {
 
   if (!userId) {
     return (
-      <div className="max-w-xl mx-auto p-4 space-y-4">
-        <h1 className="text-2xl font-bold">ShopWise</h1>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          className="w-full border rounded-xl p-3"
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Senha"
-          className="w-full border rounded-xl p-3"
-          onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-        />
-        <button onClick={handleLogin} className="w-full bg-black text-white p-3 rounded-xl">
-          Entrar
-        </button>
-        {loginError && <div className="text-red-500 text-sm">{loginError}</div>}
+      <div style={{
+        minHeight: '100dvh',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        padding: 24,
+        background: 'linear-gradient(160deg, #f0f7f0 0%, #e8f4e8 100%)',
+      }}>
+        <div style={{ marginBottom: 40, textAlign: 'center' }}>
+          <div style={{ fontSize: 56, marginBottom: 10 }}>🛍️</div>
+          <h1 style={{ fontFamily: 'Nunito', fontWeight: 900, fontSize: 32, margin: '0 0 6px', color: 'var(--text)', letterSpacing: '-0.5px' }}>
+            Shop<span style={{ color: 'var(--green)' }}>Wise</span>
+          </h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: 0 }}>Inteligência de preços nas suas compras</p>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Input type="email" value={email} onChange={setEmail} placeholder="Email" />
+          <Input type="password" value={password} onChange={setPassword} placeholder="Senha"
+            onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
+          <Button onClick={handleLogin} variant="primary" fullWidth>Entrar</Button>
+          {loginError && (
+            <div style={{ textAlign: 'center', fontSize: 13, color: '#ef4444', fontFamily: 'Nunito', fontWeight: 700 }}>
+              {loginError}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-xl mx-auto p-4 space-y-4 pb-20">
-      {showScanner && (
-        <QrCodeScanner
-          onScan={handleScan}
-          onClose={() => setShowScanner(false)}
-        />
-      )}
-
-      <h2 className="text-xl font-bold">Importar nota</h2>
-
-      <button
-        onClick={() => setShowScanner(true)}
-        className="w-full bg-black text-white p-4 rounded-xl text-lg font-medium flex items-center justify-center gap-2"
-      >
-        📷 Escanear QR code
-      </button>
-
-      <div className="flex items-center gap-2 text-gray-400 text-sm">
-        <div className="flex-1 h-px bg-gray-200" />
-        ou cole a URL
-        <div className="flex-1 h-px bg-gray-200" />
+    <div>
+      {showScanner && <QrCodeScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
+      <PageHeader title="Importar nota" subtitle="Escaneie ou cole a URL do QR code" />
+      <div style={{ padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Button onClick={() => setShowScanner(true)} variant="primary" fullWidth>
+          📷 Escanear QR code
+        </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-subtle)', fontSize: 13 }}>
+          <div style={{ flex: 1, height: 1.5, background: 'var(--border)', borderRadius: 1 }} />
+          ou cole a URL
+          <div style={{ flex: 1, height: 1.5, background: 'var(--border)', borderRadius: 1 }} />
+        </div>
+        <Input value={url} onChange={setUrl} placeholder="https://www.nfce.fazenda.sp.gov.br/..." />
+        <Button onClick={() => handlePreview()} disabled={loading || !url} variant="secondary" fullWidth>
+          {loading ? 'Buscando...' : 'Ver prévia'}
+        </Button>
+        {error && (
+          <div style={{ fontSize: 13, color: '#ef4444', textAlign: 'center', fontFamily: 'Nunito', fontWeight: 700 }}>
+            {error}
+          </div>
+        )}
+        {imported && (
+          <Card>
+            <div style={{ textAlign: 'center', color: 'var(--green)', fontFamily: 'Nunito', fontWeight: 800 }}>
+              ✓ Nota importada com sucesso!
+            </div>
+          </Card>
+        )}
+        {preview && <ReceiptPreviewCard preview={preview} onConfirm={handleImport} loading={importing} />}
       </div>
-
-      <input
-        type="text"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        placeholder="https://www.nfce.fazenda.sp.gov.br/..."
-        className="w-full border rounded-xl p-3 text-sm"
-      />
-
-      <button
-        onClick={() => handlePreview()}
-        disabled={loading || !url}
-        className="w-full bg-gray-800 text-white p-3 rounded-xl disabled:opacity-50"
-      >
-        {loading ? 'Buscando...' : 'Ver prévia'}
-      </button>
-
-      {error && <div className="text-red-500 text-sm">{error}</div>}
-
-      {imported && (
-        <div className="text-green-600 font-medium">✓ Nota importada com sucesso!</div>
-      )}
-
-      {preview && (
-        <ReceiptPreviewCard
-          preview={preview}
-          onConfirm={handleImport}
-          loading={importing}
-        />
-      )}
     </div>
   );
 }

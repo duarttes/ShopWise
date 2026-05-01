@@ -1,69 +1,53 @@
 import { useEffect, useState } from 'react';
 import { getRecentReceipts, getStoredUserId } from '../services/api';
+import { Card, PageHeader, EmptyState } from '../components/ui';
 
 export function ReceiptsPage() {
   const userId = getStoredUserId()!;
   const [receipts, setReceipts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getRecentReceipts(userId)
       .then((res) => setReceipts(res.receipts ?? []))
-      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [userId]);
 
-  if (loading) return <div className="p-4">Carregando...</div>;
-  if (error) return <div className="p-4 text-red-500">{error}</div>;
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-muted)' }}>
+      Carregando...
+    </div>
+  );
 
   return (
-    <div className="max-w-xl mx-auto p-4 space-y-4 pb-20">
-      <h2 className="text-xl font-bold">Minhas notas</h2>
-
-      {receipts.length === 0 && (
-        <div className="text-gray-500 text-sm">Nenhuma nota importada ainda.</div>
-      )}
-
-      {receipts.map((receipt: any) => (
-        <div key={receipt.id} className="border rounded-xl p-4 space-y-2">
-          <div className="flex justify-between items-start">
-            <div>
-              <div className="font-bold">{receipt.market?.marketName}</div>
-              <div className="text-xs text-gray-500">{receipt.market?.city} · {receipt.market?.state}</div>
-            </div>
-            <div className="font-bold text-green-600">
-              R$ {Number(receipt.totalAmount).toFixed(2)}
-            </div>
-          </div>
-
-          <div className="text-xs text-gray-500">
-            {new Date(receipt.purchasedAt).toLocaleDateString('pt-BR', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-            })}
-            {' · '}
-            {receipt.items?.length ?? 0} itens
-          </div>
-
-          {receipt.items?.length > 0 && (
-            <div className="space-y-1 pt-1">
-              {receipt.items.slice(0, 3).map((item: any) => (
-                <div key={item.id} className="flex justify-between text-sm text-gray-600">
-                  <span>{item.nameRaw}</span>
-                  <span>R$ {Number(item.totalPrice).toFixed(2)}</span>
+    <div>
+      <PageHeader title="Minhas notas" subtitle={`${receipts.length} nota(s) importada(s)`} />
+      <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {receipts.length === 0 && (
+          <EmptyState icon="🧾" title="Nenhuma nota ainda" description="Escaneie um QR code de nota fiscal para começar." />
+        )}
+        {receipts.map((receipt) => (
+          <Card key={receipt.id}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+              <div style={{ flex: 1, marginRight: 12 }}>
+                <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 15, lineHeight: 1.3, color: 'var(--text)' }}>
+                  {receipt.market?.marketName}
                 </div>
-              ))}
-              {receipt.items.length > 3 && (
-                <div className="text-xs text-gray-400">
-                  +{receipt.items.length - 3} itens
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                  {receipt.market?.city} · {receipt.market?.state}
                 </div>
-              )}
+              </div>
+              <div style={{ fontFamily: 'Nunito', fontWeight: 900, fontSize: 18, color: 'var(--green)', whiteSpace: 'nowrap' }}>
+                R$ {Number(receipt.totalAmount).toFixed(2)}
+              </div>
             </div>
-          )}
-        </div>
-      ))}
+            <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--text-subtle)' }}>
+              <span>📅 {new Date(receipt.purchasedAt).toLocaleDateString('pt-BR')}</span>
+              <span>📦 {receipt.itemsCount} itens</span>
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

@@ -1,117 +1,167 @@
 import { useEffect, useState } from 'react';
 import { getHomeInsights, updateLocation, getStoredUserId } from '../services/api';
+import { Card, Button, SectionLabel, EmptyState } from '../components/ui';
 
 export function HomePage() {
   const [insights, setInsights] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [locMsg, setLocMsg] = useState<string | null>(null);
-
   const userId = getStoredUserId();
 
   useEffect(() => {
     if (!userId) return;
     getHomeInsights(userId)
       .then((res) => setInsights(res.data))
-      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [userId]);
 
   async function handleSaveLocation() {
-    if (!navigator.geolocation) {
-      setLocMsg('Geolocalização não suportada neste dispositivo.');
-      return;
-    }
-
+    if (!navigator.geolocation) return setLocMsg('Não suportado.');
     setLocating(true);
-    setLocMsg(null);
-
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
           await updateLocation(pos.coords.latitude, pos.coords.longitude);
-          setLocMsg('Localização salva!');
-        } catch {
-          setLocMsg('Erro ao salvar localização.');
-        } finally {
-          setLocating(false);
-        }
+          setLocMsg('✓ Localização salva!');
+        } finally { setLocating(false); }
       },
-      () => {
-        setLocMsg('Permissão de localização negada.');
-        setLocating(false);
-      }
+      () => { setLocMsg('Permissão negada.'); setLocating(false); }
     );
   }
 
-  if (loading) return <div className="p-4">Carregando...</div>;
-  if (error) return <div className="p-4 text-red-500">{error}</div>;
-  if (!insights) return null;
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-muted)', fontFamily: 'Nunito' }}>
+      Carregando...
+    </div>
+  );
 
   return (
-    <div className="max-w-xl mx-auto p-4 space-y-4 pb-20">
-      <h2 className="text-xl font-bold">Este mês</h2>
+    <div style={{ paddingBottom: 16 }}>
+      <div style={{
+        background: 'linear-gradient(160deg, #f0f7f0 0%, #e8f4e8 100%)',
+        padding: '28px 20px 20px',
+        borderBottom: '1.5px solid var(--border)',
+      }}>
+        <p style={{ margin: '0 0 2px', fontSize: 12, color: 'var(--text-muted)', fontFamily: 'Nunito Sans' }}>
+          bom dia 👋
+        </p>
+        <h1 style={{
+          fontFamily: 'Nunito, sans-serif',
+          fontWeight: 900,
+          fontSize: 28,
+          margin: '0 0 16px',
+          color: 'var(--text)',
+          letterSpacing: '-0.3px',
+        }}>
+          Shop<span style={{ color: 'var(--green)' }}>Wise</span>
+        </h1>
 
-      <div className="grid grid-cols-3 gap-3">
-        <div className="border rounded-xl p-3 text-center">
-          <div className="text-2xl font-bold">R$ {insights.month.totalSpent.toFixed(2)}</div>
-          <div className="text-xs text-gray-500">gasto total</div>
-        </div>
-        <div className="border rounded-xl p-3 text-center">
-          <div className="text-2xl font-bold">{insights.month.receiptsCount}</div>
-          <div className="text-xs text-gray-500">notas</div>
-        </div>
-        <div className="border rounded-xl p-3 text-center">
-          <div className="text-2xl font-bold">{insights.month.marketsCount}</div>
-          <div className="text-xs text-gray-500">mercados</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+          {[
+            { label: 'este mês', value: `R$ ${insights?.month?.totalSpent?.toFixed(2) ?? '0.00'}`, accent: true },
+            { label: 'notas', value: String(insights?.month?.receiptsCount ?? 0), accent: false },
+            { label: 'mercados', value: String(insights?.month?.marketsCount ?? 0), accent: false },
+          ].map((item) => (
+            <div key={item.label} style={{
+              background: '#fff',
+              borderRadius: 14,
+              padding: '10px 12px',
+              boxShadow: '0 3px 0 var(--green-muted), 0 5px 12px rgba(80,140,80,0.07)',
+            }}>
+              <div style={{
+                fontFamily: 'Nunito, sans-serif',
+                fontWeight: 800,
+                fontSize: 17,
+                color: item.accent ? 'var(--green)' : 'var(--text)',
+              }}>
+                {item.value}
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text-subtle)', marginTop: 2 }}>{item.label}</div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {insights.topMarket && (
-        <div className="border rounded-xl p-3">
-          <div className="text-xs text-gray-500 mb-1">Mercado mais frequente</div>
-          <div className="font-bold">{insights.topMarket.name}</div>
-          <div className="text-sm text-gray-600">
-            {insights.topMarket.visits} visita(s) · R$ {insights.topMarket.totalSpent.toFixed(2)}
-          </div>
-        </div>
-      )}
+      <div style={{ padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {insights.priceHighlights?.lowestRecentPrices?.length > 0 && (
-        <div>
-          <div className="text-sm font-semibold mb-2">Melhores preços recentes</div>
-          <div className="space-y-2">
-            {insights.priceHighlights.lowestRecentPrices.slice(0, 3).map((item: any) => (
-              <div key={item.productId} className="border rounded-xl p-3 flex justify-between">
+        {insights?.topMarket && (
+          <div>
+            <SectionLabel>Mercado favorito</SectionLabel>
+            <Card>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div className="text-sm font-medium">{item.productName}</div>
-                  <div className="text-xs text-gray-500">{item.marketName}</div>
+                  <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>
+                    {insights.topMarket.name}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    {insights.topMarket.visits} visita(s) · R$ {insights.topMarket.totalSpent?.toFixed(2)}
+                  </div>
                 </div>
-                <div className="font-bold text-green-600">R$ {item.price.toFixed(2)}</div>
+                <div style={{
+                  background: 'var(--green-light)',
+                  color: 'var(--green)',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: '4px 10px',
+                  borderRadius: 20,
+                  fontFamily: 'Nunito',
+                }}>fav ★</div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="border rounded-xl p-3 space-y-2">
-        <div className="text-sm font-semibold">Minha localização</div>
-        <p className="text-xs text-gray-500">
-          Salve sua localização para receber recomendações de mercados próximos.
-        </p>
-        <button
-          onClick={handleSaveLocation}
-          disabled={locating}
-          className="w-full bg-black text-white p-2 rounded-xl text-sm disabled:opacity-50"
-        >
-          {locating ? 'Obtendo localização...' : '📍 Usar minha localização atual'}
-        </button>
-        {locMsg && (
-          <div className={`text-xs ${locMsg.includes('salva') ? 'text-green-600' : 'text-red-500'}`}>
-            {locMsg}
+            </Card>
           </div>
         )}
+
+        {insights?.priceHighlights?.lowestRecentPrices?.length > 0 && (
+          <div>
+            <SectionLabel>Melhores preços recentes</SectionLabel>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {insights.priceHighlights.lowestRecentPrices.slice(0, 3).map((item: any) => (
+                <Card key={item.productId}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontFamily: 'Nunito', fontWeight: 700, fontSize: 14 }}>{item.productName}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{item.marketName}</div>
+                    </div>
+                    <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 17, color: 'var(--green)' }}>
+                      R$ {item.price?.toFixed(2)}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!insights?.topMarket && (
+          <EmptyState
+            icon="🛒"
+            title="Nenhuma compra ainda"
+            description="Importe sua primeira nota fiscal para ver seus insights aqui."
+          />
+        )}
+
+        <div>
+          <SectionLabel>Minha localização</SectionLabel>
+          <Card>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+              Para receber recomendações de mercados próximos.
+            </p>
+            <Button onClick={handleSaveLocation} disabled={locating} variant="secondary" fullWidth>
+              {locating ? 'Obtendo...' : '📍 Usar localização atual'}
+            </Button>
+            {locMsg && (
+              <div style={{
+                fontSize: 13,
+                marginTop: 8,
+                color: locMsg.includes('✓') ? 'var(--green)' : '#ef4444',
+                textAlign: 'center',
+                fontFamily: 'Nunito',
+                fontWeight: 700,
+              }}>{locMsg}</div>
+            )}
+          </Card>
+        </div>
       </div>
     </div>
   );
