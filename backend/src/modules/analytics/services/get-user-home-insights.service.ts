@@ -41,23 +41,27 @@ export class GetUserHomeInsightsService {
 
     const { startOfMonth, endOfMonth } = this.getCurrentMonthRange();
 
-    const receipts = await this.analyticsRepository.findUserReceipts(userId, {
+    const monthReceipts = await this.analyticsRepository.findUserReceipts(userId, {
       startDate: startOfMonth,
       endDate: endOfMonth,
     });
 
     const totalSpent = Number(
-      receipts.reduce((sum, receipt) => sum + receipt.totalAmount, 0).toFixed(2)
+      monthReceipts.reduce((sum, r) => sum + r.totalAmount, 0).toFixed(2)
     );
+    const receiptsCount = monthReceipts.length;
+    const marketsCount = new Set(monthReceipts.map((r) => r.marketId)).size;
 
-    const receiptsCount = receipts.length;
-    const marketsCount = new Set(receipts.map((receipt) => receipt.marketId)).size;
+    // Se não há dados no mês, usa histórico completo para insights
+    const insightReceipts = monthReceipts.length > 0
+      ? monthReceipts
+      : await this.analyticsRepository.findUserReceipts(userId, {});
 
-    const topMarket = this.getTopMarket(receipts);
+    const topMarket = this.getTopMarket(insightReceipts);
 
     const productIds = Array.from(
       new Set(
-        receipts.flatMap((receipt) =>
+        insightReceipts.flatMap((receipt) =>
           receipt.items
             .filter((item) => Boolean(item.productId))
             .map((item) => item.productId as string)
@@ -82,10 +86,7 @@ export class GetUserHomeInsightsService {
 
     for (const [productId, records] of groupedByProduct.entries()) {
       const latestRecord = records[0];
-
-      if (!latestRecord) {
-        continue;
-      }
+      if (!latestRecord) continue;
 
       lowestRecentPrices.push({
         productId,
@@ -99,25 +100,17 @@ export class GetUserHomeInsightsService {
       });
 
       const previousRecord = records[1];
-
-      if (!previousRecord) {
-        continue;
-      }
+      if (!previousRecord) continue;
 
       const increaseAmount = Number(
         (latestRecord.price - previousRecord.price).toFixed(2)
       );
-
-      if (increaseAmount <= 0) {
-        continue;
-      }
+      if (increaseAmount <= 0) continue;
 
       const increasePercentage =
         previousRecord.price > 0
           ? Number(
-              (((latestRecord.price - previousRecord.price) /
-                previousRecord.price) *
-                100).toFixed(2)
+              (((latestRecord.price - previousRecord.price) / previousRecord.price) * 100).toFixed(2)
             )
           : 0;
 
