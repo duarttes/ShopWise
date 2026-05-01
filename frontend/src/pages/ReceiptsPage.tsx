@@ -1,23 +1,24 @@
 import { useEffect, useState } from 'react';
 import { getRecentReceipts, getStoredUserId } from '../services/api';
 import { Card, PageHeader, EmptyState } from '../components/ui';
+import { PageLoading } from '../components/PageLoading';
+import { PageError } from '../components/PageError';
 
 export function ReceiptsPage() {
   const userId = getStoredUserId()!;
   const [receipts, setReceipts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getRecentReceipts(userId)
       .then((res) => setReceipts(res.receipts ?? []))
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [userId]);
 
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-muted)' }}>
-      Carregando...
-    </div>
-  );
+    if (loading) return <PageLoading />;
+    if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;
 
   return (
     <div>

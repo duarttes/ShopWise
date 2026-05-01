@@ -8,6 +8,8 @@ import {
   getStoredUserId,
 } from '../services/api';
 import { Card, Button, Input, PageHeader, SectionLabel, EmptyState } from '../components/ui';
+import { PageLoading } from '../components/PageLoading';
+import { PageError } from '../components/PageError';
 
 export function ShoppingListsPage() {
   const userId = getStoredUserId()!;
@@ -19,6 +21,7 @@ export function ShoppingListsPage() {
   const [recommendation, setRecommendation] = useState<any>(null);
   const [loadingRec, setLoadingRec] = useState(false);
   const [recError, setRecError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => { fetchLists(); }, []);
 
@@ -28,6 +31,8 @@ export function ShoppingListsPage() {
       const res = await getShoppingLists(userId);
       setLists(res.data);
       if (res.data.length > 0) setSelectedList(res.data[0]);
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -78,11 +83,8 @@ export function ShoppingListsPage() {
     }
   }
 
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-muted)' }}>
-      Carregando...
-    </div>
-  );
+  if (loading) return <PageLoading />;
+  if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;
 
   return (
     <div>

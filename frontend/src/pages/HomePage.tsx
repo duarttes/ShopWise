@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getHomeInsights, updateLocation, getStoredUserId } from '../services/api';
 import { Card, Button, SectionLabel, EmptyState } from '../components/ui';
+import { PageLoading } from '../components/PageLoading';
+import { PageError } from '../components/PageError';
 
 export function HomePage() {
   const [insights, setInsights] = useState<any>(null);
@@ -9,10 +11,14 @@ export function HomePage() {
   const [locMsg, setLocMsg] = useState<string | null>(null);
   const userId = getStoredUserId();
 
+const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!userId) return;
+    setLoading(true);
     getHomeInsights(userId)
       .then((res) => setInsights(res.data))
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [userId]);
 
@@ -30,11 +36,8 @@ export function HomePage() {
     );
   }
 
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-muted)', fontFamily: 'Nunito' }}>
-      Carregando...
-    </div>
-  );
+  if (loading) return <PageLoading />;
+  if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;
 
   return (
     <div style={{ paddingBottom: 24 }}>

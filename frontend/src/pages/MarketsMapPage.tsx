@@ -4,6 +4,8 @@ import L from 'leaflet';
 import { getMarkets } from '../services/api';
 import { PageHeader } from '../components/ui';
 import 'leaflet/dist/leaflet.css';
+import { PageLoading } from '../components/PageLoading';
+import { PageError } from '../components/PageError';
 
 const greenIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
@@ -17,10 +19,12 @@ const greenIcon = new L.Icon({
 export function MarketsMapPage() {
   const [markets, setMarkets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getMarkets()
       .then((res) => setMarkets(res.data ?? []))
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
@@ -32,11 +36,8 @@ export function MarketsMapPage() {
     ? [marketsWithCoords[0].latitude, marketsWithCoords[0].longitude]
     : [-22.9068, -43.1729];
 
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-muted)' }}>
-      Carregando...
-    </div>
-  );
+    if (loading) return <PageLoading />;
+    if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh' }}>
