@@ -167,3 +167,9 @@ export async function getMarkets() {
   if (!response.ok) throw new Error('Erro ao buscar mercados');
   return response.json();
 }
+
+export function logout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('userId');
+  window.location.reload();
+}

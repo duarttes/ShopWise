@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Home, Receipt, ScanLine, ShoppingCart, MapPin, Menu, X } from 'lucide-react';
+import { Home, Receipt, ScanLine, ShoppingCart, MapPin, Menu, X, LogOut } from 'lucide-react';
 import { ScanPage } from './pages/ScanPage';
 import { HomePage } from './pages/HomePage';
 import { ShoppingListsPage } from './pages/ShoppingListsPage';
 import { ReceiptsPage } from './pages/ReceiptsPage';
 import { MarketsMapPage } from './pages/MarketsMapPage';
-import { getStoredUserId } from './services/api';
+import { getStoredUserId, logout } from './services/api';
 
 const tabs = [
   { id: 'home',     label: 'Início',   Icon: Home },
@@ -150,18 +150,39 @@ function App() {
         </nav>
 
         <div style={{
-          padding: '16px 20px',
+          padding: '12px 12px 20px',
           borderTop: '1.5px solid var(--border)',
-          fontSize: 12,
-          color: 'var(--text-subtle)',
-          fontFamily: 'Nunito Sans',
         }}>
-          ShopWise · Inteligência de preços
-        </div>
+          <button
+            onClick={logout}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '12px 14px',
+              borderRadius: 12,
+              border: 'none',
+              cursor: 'pointer',
+              background: 'transparent',
+              color: '#ef4444',
+              fontFamily: 'Nunito, sans-serif',
+              fontSize: 15,
+              fontWeight: 700,
+              transition: 'background 0.15s',
+            }}
+          >
+            <LogOut size={20} strokeWidth={1.8} />
+            Sair da conta
+          </button>
+          <div style={{ fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'Nunito Sans', textAlign: 'center', marginTop: 8 }}>
+            ShopWise · v1.0
+          </div>
+      </div>
       </div>
 
       {/* Content */}
-      // Substitui o div do content por:
+      
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {tab === 'home'     && <HomePage />}
         {tab === 'receipts' && <ReceiptsPage />}
