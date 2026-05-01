@@ -18,50 +18,50 @@ const tabs = [
 function App() {
   const [tab, setTab] = useState<'home' | 'receipts' | 'scan' | 'lists' | 'map'>('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const userId = getStoredUserId();
+  const [userId, setUserId] = useState<string | null>(getStoredUserId());
 
-  if (!userId) return <ScanPage />;
-
-  const currentTab = tabs.find(t => t.id === tab)!;
+  function handleLoginSuccess() {
+    setUserId(getStoredUserId());
+    setTab('home');
+  }
 
   function navigate(id: string) {
     setTab(id as any);
     setDrawerOpen(false);
   }
 
+  if (!userId) {
+    return <ScanPage onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--surface)' }}>
 
-      {/* Top bar */}
-        
-        <header style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 200,
-          background: '#fff',
-          borderBottom: '1.5px solid var(--border)',
-          padding: '0 16px',
-          height: 56,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          boxShadow: '0 2px 8px rgba(80,140,80,0.06)',
-        }}>
+      <header style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 200,
+        background: '#fff',
+        borderBottom: '1.5px solid var(--border)',
+        padding: '0 16px',
+        height: 56,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 2px 8px rgba(80,140,80,0.06)',
+      }}>
         <button
           onClick={() => setDrawerOpen(true)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text)', display: 'flex', alignItems: 'center' }}
         >
           <Menu size={24} strokeWidth={2} />
         </button>
-
         <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: 20, letterSpacing: '-0.3px' }}>
           Shop<span style={{ color: 'var(--green)' }}>Wise</span>
         </div>
-
         <div style={{ width: 32 }} />
       </header>
 
-      {/* Overlay */}
       {drawerOpen && (
         <div
           onClick={() => setDrawerOpen(false)}
@@ -75,7 +75,6 @@ function App() {
         />
       )}
 
-      {/* Drawer */}
       <div style={{
         position: 'fixed',
         top: 0,
@@ -149,10 +148,7 @@ function App() {
           })}
         </nav>
 
-        <div style={{
-          padding: '12px 12px 20px',
-          borderTop: '1.5px solid var(--border)',
-        }}>
+        <div style={{ padding: '12px 12px 20px', borderTop: '1.5px solid var(--border)' }}>
           <button
             onClick={logout}
             style={{
@@ -178,19 +174,16 @@ function App() {
           <div style={{ fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'Nunito Sans', textAlign: 'center', marginTop: 8 }}>
             ShopWise · v1.0
           </div>
-      </div>
+        </div>
       </div>
 
-      {/* Content */}
-      
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {tab === 'home'     && <HomePage />}
         {tab === 'receipts' && <ReceiptsPage />}
-        {tab === 'scan'     && <ScanPage />}
+        {tab === 'scan'     && <ScanPage onLoginSuccess={handleLoginSuccess} />}
         {tab === 'lists'    && <ShoppingListsPage />}
         {tab === 'map'      && <MarketsMapPage />}
       </div>
-
     </div>
   );
 }

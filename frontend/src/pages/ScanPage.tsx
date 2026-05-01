@@ -4,7 +4,7 @@ import { ReceiptPreviewCard } from '../components/ReceiptPreviewCard';
 import { QrCodeScanner } from '../components/QrCodeScanner';
 import { Button, Input, Card, PageHeader } from '../components/ui';
 
-export function ScanPage() {
+export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {}) {
   const [userId, setUserId] = useState<string | null>(getStoredUserId());
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,6 +22,7 @@ export function ScanPage() {
       setLoginError(null);
       const res = await login(email, password);
       setUserId(res.data.user.id);
+      onLoginSuccess?.();
     } catch {
       setLoginError('Email ou senha incorretos.');
     }
