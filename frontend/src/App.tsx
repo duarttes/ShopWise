@@ -4,16 +4,18 @@ import { HomePage } from './pages/HomePage';
 import { ShoppingListsPage } from './pages/ShoppingListsPage';
 import { ReceiptsPage } from './pages/ReceiptsPage';
 import { getStoredUserId } from './services/api';
+import { MarketsMapPage } from './pages/MarketsMapPage';
 
 const tabs = [
   { id: 'home', label: 'Início', icon: '🏠' },
   { id: 'receipts', label: 'Notas', icon: '🧾' },
   { id: 'scan', label: 'Escanear', icon: '📷' },
   { id: 'lists', label: 'Listas', icon: '🛒' },
+  { id: 'map', label: 'Mapa', icon: '🗺️' },
 ];
 
 function App() {
-  const [tab, setTab] = useState<'home' | 'receipts' | 'scan' | 'lists'>('home');
+  const [tab, setTab] = useState<'home' | 'receipts' | 'scan' | 'lists' | 'map'>('home');
   const userId = getStoredUserId();
 
   if (!userId) return <ScanPage />;
@@ -25,6 +27,7 @@ function App() {
         {tab === 'receipts' && <ReceiptsPage />}
         {tab === 'scan' && <ScanPage />}
         {tab === 'lists' && <ShoppingListsPage />}
+        {tab === 'map' && <MarketsMapPage />}
       </div>
 
       <nav style={{

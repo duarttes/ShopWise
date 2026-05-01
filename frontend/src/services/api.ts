@@ -161,3 +161,9 @@ export async function getRecentReceipts(userId: string) {
   if (!response.ok) throw new Error('Erro ao buscar notas');
   return response.json();
 }
+
+export async function getMarkets() {
+  const response = await apiFetch(`${API_URL}/markets`);
+  if (!response.ok) throw new Error('Erro ao buscar mercados');
+  return response.json();
+}
