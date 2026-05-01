@@ -212,3 +212,12 @@ export async function getMostExpensiveProducts(userId: string) {
   if (!response.ok) throw new Error('Erro ao buscar produtos');
   return response.json();
 }
+
+export async function updateMarketDisplayName(marketId: string, displayName: string) {
+  const response = await apiFetch(`${API_URL}/markets/${marketId}/display-name`, {
+    method: 'PATCH',
+    body: JSON.stringify({ displayName }),
+  });
+  if (!response.ok) throw new Error('Erro ao atualizar nome do mercado');
+  return response.json();
+}
