@@ -3,6 +3,7 @@ import { previewNfce, importNfce, login, register, getStoredUserId } from '../se
 import { ReceiptPreviewCard } from '../components/ReceiptPreviewCard';
 import { QrCodeScanner } from '../components/QrCodeScanner';
 import { Button, Input, Card, PageHeader } from '../components/ui';
+import { Toast } from '../components/Toast';
 
 export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {}) {
   const [userId, setUserId] = useState<string | null>(getStoredUserId());
@@ -163,11 +164,8 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
             {authLoading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
           </Button>
 
-          {authError && (
-            <div style={{ textAlign: 'center', fontSize: 13, color: '#ef4444', fontFamily: 'Nunito', fontWeight: 700 }}>
-              {authError}
-            </div>
-          )}
+          {error && <Toast message={error} type="error" onClose={() => setError(null)} />}
+
         </div>
       </div>
     );

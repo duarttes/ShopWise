@@ -105,30 +105,30 @@ export function ShoppingListsPage() {
 
         {lists.length > 0 && (
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-            {lists.map((list) => (
-              <button
-                key={list.id}
-                onClick={() => { setSelectedList(list); setRecommendation(null); }}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: 20,
-                  border: 'none',
-                  fontSize: 13,
-                  fontFamily: 'Nunito, sans-serif',
-                  fontWeight: 700,
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                  background: selectedList?.id === list.id ? 'var(--green)' : '#fff',
-                  color: selectedList?.id === list.id ? '#fff' : 'var(--text-muted)',
-                  boxShadow: selectedList?.id === list.id
-                    ? '0 3px 0 var(--green-dark), 0 5px 12px rgba(74,154,90,0.22)'
-                    : '0 3px 0 var(--green-muted), 0 4px 10px rgba(80,140,80,0.07)',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {list.name}
-              </button>
-            ))}
+          {lists.map((list) => (
+            <button
+              key={list.id}
+              onClick={() => { setSelectedList(list); setRecommendation(null); }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 20,
+                border: '1px solid var(--border)',
+                fontSize: 13,
+                fontFamily: 'Nunito, sans-serif',
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+                background: selectedList?.id === list.id ? 'var(--green)' : 'var(--card)',
+                color: selectedList?.id === list.id ? '#fff' : 'var(--text-muted)',
+                boxShadow: selectedList?.id === list.id
+                  ? 'var(--shadow-btn)'
+                  : 'var(--shadow-card)',
+                transition: 'all 0.15s',
+              }}
+            >
+              {list.name}
+            </button>
+          ))}
           </div>
         )}
 

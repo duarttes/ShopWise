@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 import { X } from '@phosphor-icons/react';
 
 interface Props {
@@ -9,44 +9,53 @@ interface Props {
 
 export function QrCodeScanner({ onScan, onClose }: Props) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const stoppedRef = useRef(false);
-
-  async function stopScanner() {
-    if (stoppedRef.current) return;
-    stoppedRef.current = true;
-    const scanner = scannerRef.current;
-    if (!scanner) return;
-    try {
-      if (scanner.isScanning) await scanner.stop();
-      scanner.clear();
-    } catch {}
-  }
+  const containerId = 'qr-scanner-container';
 
   useEffect(() => {
-    const scanner = new Html5Qrcode('qr-reader');
+    const scanner = new Html5Qrcode(containerId, { verbose: false });
     scannerRef.current = scanner;
-    stoppedRef.current = false;
 
     scanner.start(
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 250, height: 250 } },
-      async (text) => {
-        await stopScanner();
-        onScan(text);
+      (text) => {
+        cleanup().then(() => onScan(text));
       },
       undefined
-    ).catch(() => onClose());
+    ).catch(() => {
+      onClose();
+    });
 
-    return () => { stopScanner(); };
+    return () => { cleanup(); };
   }, []);
 
+  async function cleanup() {
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+    scannerRef.current = null;
+    try {
+      const state = scanner.getState();
+      if (
+        state === Html5QrcodeScannerState.SCANNING ||
+        state === Html5QrcodeScannerState.PAUSED
+      ) {
+        await scanner.stop();
+      }
+      scanner.clear();
+    } catch {}
+  }
+
   async function handleClose() {
-    await stopScanner();
+    await cleanup();
     onClose();
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 500, display: 'flex', flexDirection: 'column' }}>
+    <div style={{
+      position: 'fixed', inset: 0,
+      background: '#000', zIndex: 500,
+      display: 'flex', flexDirection: 'column',
+    }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px' }}>
         <span style={{ color: '#fff', fontFamily: 'Nunito', fontWeight: 700, fontSize: 15 }}>
           Aponte para o QR code
@@ -56,7 +65,7 @@ export function QrCodeScanner({ onScan, onClose }: Props) {
         </button>
       </div>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div id="qr-reader" style={{ width: '100%', maxWidth: 360 }} />
+        <div id={containerId} style={{ width: '100%', maxWidth: 360 }} />
       </div>
     </div>
   );

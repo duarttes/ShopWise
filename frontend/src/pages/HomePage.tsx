@@ -6,6 +6,7 @@ import { PageLoading } from '../components/PageLoading';
 import { PageError } from '../components/PageError';
 import { QrCodeScanner } from '../components/QrCodeScanner';
 import { ReceiptPreviewCard } from '../components/ReceiptPreviewCard';
+import { Toast } from '../components/Toast';
 
 export function HomePage() {
   const userId = getStoredUserId();
@@ -165,17 +166,7 @@ export function HomePage() {
           {scanLoading ? 'Lendo nota...' : 'Escanear nota fiscal'}
         </button>
 
-        {scanError && (
-          <div style={{ marginTop: 10, fontSize: 13, color: '#e05050', textAlign: 'center', fontFamily: 'Nunito', fontWeight: 700 }}>
-            {scanError}
-          </div>
-        )}
-
-        {imported && (
-          <div style={{ marginTop: 10, fontSize: 14, color: 'var(--green-light)', textAlign: 'center', fontFamily: 'Nunito', fontWeight: 700 }}>
-            ✓ Nota importada com sucesso!
-          </div>
-        )}
+        {scanError && <Toast message={scanError} type="error" onClose={() => setScanError(null)} />}
 
         {preview && (
           <div style={{ marginTop: 12 }}>
