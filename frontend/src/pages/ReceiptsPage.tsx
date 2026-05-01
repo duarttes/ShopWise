@@ -9,7 +9,7 @@ export function ReceiptsPage() {
 
   useEffect(() => {
     getRecentReceipts(userId)
-      .then((res) => setReceipts(res.data))
+      .then((res) => setReceipts(res.receipts ?? []))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [userId]);
@@ -29,7 +29,7 @@ export function ReceiptsPage() {
         <div key={receipt.id} className="border rounded-xl p-4 space-y-2">
           <div className="flex justify-between items-start">
             <div>
-              <div className="font-bold">{receipt.market?.displayName ?? receipt.market?.name}</div>
+              <div className="font-bold">{receipt.market?.marketName}</div>
               <div className="text-xs text-gray-500">{receipt.market?.city} · {receipt.market?.state}</div>
             </div>
             <div className="font-bold text-green-600">
