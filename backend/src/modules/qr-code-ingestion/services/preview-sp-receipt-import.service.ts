@@ -54,7 +54,16 @@ export class PreviewSpReceiptImportService {
           },
         })
       : null;
+    
+        // Busca mercado existente pelo CNPJ
+    const cnpj = parsedReceipt.issuer.cnpj?.replace(/\D/g, '') ?? null;
 
+    const existingMarket = cnpj
+      ? await prisma.market.findFirst({
+          where: { cnpj: { contains: cnpj } },
+          select: { id: true, name: true, displayName: true },
+        })
+      : null;
     const resolvedItems = await Promise.all(
       parsedReceipt.items.map(async (item) => {
         const matchedProduct = await resolveProductByName(item.nameRaw);
@@ -130,6 +139,14 @@ export class PreviewSpReceiptImportService {
         itemsCount: parsedReceipt.items.length,
         items: resolvedItems,
       },
+      // Adiciona no objeto de retorno, junto com duplicateCheck:
+      market: existingMarket
+        ? {
+            id: existingMarket.id,
+            name: existingMarket.name,
+            displayName: existingMarket.displayName,
+          }
+        : null,
       summary: {
         matchedItemsCount,
         autoCreateItemsCount,
