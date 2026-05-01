@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import { X } from '@phosphor-icons/react';
+
 
 interface QrCodeScannerProps {
   onScan: (result: string) => void;
@@ -36,7 +38,7 @@ export function QrCodeScanner({ onScan, onClose }: QrCodeScannerProps) {
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
       <div className="flex justify-between items-center p-4">
         <span className="text-white font-medium">Aponte para o QR code</span>
-        <button onClick={onClose} className="text-white text-2xl">✕</button>
+        <button onClick={onClose} className="text-white text-2xl"><X size={24} weight="bold" color="#fff" /></button>
       </div>
       <div className="flex-1 flex items-center justify-center">
         <div id={containerId} className="w-full max-w-sm" />

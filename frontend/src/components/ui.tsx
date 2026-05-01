@@ -7,10 +7,11 @@ export function Card({ children, className = '', style = {} }: {
 }) {
   return (
     <div style={{
-      background: '#fff',
+      background: 'var(--card)',
       borderRadius: 16,
       padding: 14,
-      boxShadow: '0 4px 0 #c8e0c8, 0 6px 16px rgba(80,140,80,0.07)',
+      border: '1px solid var(--border)',
+      boxShadow: 'var(--shadow-card)',
       ...style,
     }} className={className}>
       {children}
@@ -57,25 +58,25 @@ export function Button({ children, onClick, disabled, variant = 'primary', fullW
     opacity: disabled ? 0.5 : 1,
     border: 'none',
     width: fullWidth ? '100%' : undefined,
-    transition: 'transform 0.1s, opacity 0.15s',
     letterSpacing: '0.1px',
+    transition: 'opacity 0.15s, transform 0.1s',
   };
 
   const variants: Record<string, React.CSSProperties> = {
     primary: {
       background: 'var(--green)',
       color: '#fff',
-      boxShadow: '0 4px 0 var(--green-dark), 0 6px 16px rgba(74,154,90,0.22)',
+      boxShadow: 'var(--shadow-btn)',
     },
     secondary: {
-      background: 'var(--green-light)',
-      color: 'var(--green-deep)',
-      boxShadow: '0 3px 0 var(--green-muted), 0 5px 12px rgba(80,140,80,0.10)',
+      background: 'var(--insight-bg)',
+      color: 'var(--green)',
+      border: '1px solid var(--insight-border)',
     },
     ghost: {
-      background: '#fff',
+      background: 'transparent',
       color: 'var(--text-muted)',
-      boxShadow: '0 3px 0 var(--border), 0 4px 10px rgba(0,0,0,0.05)',
+      border: '1px solid var(--border)',
     },
   };
 
@@ -104,13 +105,12 @@ export function Input({ value, onChange, placeholder, type = 'text', onKeyDown }
         width: '100%',
         padding: '13px 16px',
         borderRadius: 14,
-        border: '1.5px solid var(--border)',
+        border: '1.5px solid var(--border-strong)',
         fontFamily: 'Nunito Sans, sans-serif',
         fontSize: 15,
-        background: '#fff',
+        background: 'var(--card)',
         color: 'var(--text)',
         outline: 'none',
-        boxShadow: '0 2px 0 var(--green-muted)',
       }}
     />
   );
@@ -122,11 +122,56 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
       fontSize: 10,
       fontWeight: 700,
       fontFamily: 'Nunito, sans-serif',
-      color: 'var(--text-subtle)',
+      color: 'var(--amber)',
       textTransform: 'uppercase',
       letterSpacing: '0.8px',
       marginBottom: 8,
       paddingLeft: 2,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+export function InsightCard({ label, value, children }: {
+  label: string;
+  value?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div style={{
+      background: 'var(--insight-bg)',
+      border: '1px solid var(--insight-border)',
+      borderRadius: 12,
+      padding: '10px 14px',
+    }}>
+      <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--amber)', marginBottom: 3 }}>
+        {label}
+      </div>
+      {value && (
+        <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>
+          {value}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+export function Badge({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 4,
+      background: 'rgba(45,122,74,0.12)',
+      border: '1px solid rgba(45,122,74,0.25)',
+      borderRadius: 20,
+      padding: '3px 8px',
+      fontSize: 10,
+      fontWeight: 700,
+      color: 'var(--green-light)',
+      fontFamily: 'Nunito',
     }}>
       {children}
     </div>

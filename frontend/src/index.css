@@ -1,20 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@300;400;500;600&display=swap');
 
 @tailwind base;
 @tailwind utilities;
 
 :root {
-  --green: #4a9a5a;
-  --green-dark: #347a44;
-  --green-deep: #1a3a1a;
-  --green-light: #e8f4e8;
-  --green-muted: #c8e0c8;
-  --surface: #f4f8f4;
+  /* Brand */
+  --green: #2d7a4a;
+  --green-light: #5ab87a;
+  --green-dark: #1a4028;
+  --green-muted: #0e2e1c;
+  --amber: #a07840;
+  --amber-light: #c8984a;
+
+  /* Light mode (Stone Sand) */
+  --surface: #f5f1ea;
+  --surface-2: #ede8df;
   --card: #ffffff;
-  --border: #c8e0c8;
-  --text: #1a2e1a;
-  --text-muted: #6a8a6a;
-  --text-subtle: #90aa90;
+  --border: rgba(120,88,40,0.12);
+  --border-strong: rgba(120,88,40,0.20);
+  --shadow-card: 0 3px 0 #d4c8b4, 0 5px 12px rgba(80,60,20,0.07);
+  --shadow-btn: 0 4px 0 #1a4028, 0 6px 16px rgba(45,122,74,0.25);
+  --text: #1e1810;
+  --text-muted: #7a6848;
+  --text-subtle: #b0a080;
+  --header-bg: linear-gradient(150deg, #f0ebe0 0%, #e8e0d0 100%);
+  --insight-bg: rgba(160,120,60,0.07);
+  --insight-border: rgba(160,120,60,0.15);
+  --nav-bg: #ffffff;
+}
+
+[data-theme="dark"] {
+  --surface: #111a14;
+  --surface-2: #1e2820;
+  --card: rgba(255,255,255,0.05);
+  --border: rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.14);
+  --shadow-card: none;
+  --shadow-btn: 0 4px 0 #0e2e1c, 0 6px 16px rgba(45,122,74,0.35);
+  --text: rgba(255,255,255,0.90);
+  --text-muted: rgba(255,255,255,0.50);
+  --text-subtle: rgba(255,255,255,0.28);
+  --header-bg: linear-gradient(150deg, rgba(45,107,69,0.20) 0%, rgba(30,40,32,0) 70%);
+  --insight-bg: rgba(160,120,60,0.10);
+  --insight-border: rgba(160,120,60,0.20);
+  --nav-bg: rgba(14,22,18,0.98);
 }
 
 * {
@@ -26,18 +55,19 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: #e8ede8;
 }
 
 body {
+  background: var(--surface);
   color: var(--text);
   font-family: 'Nunito Sans', sans-serif;
   font-size: 15px;
   line-height: 1.5;
   overscroll-behavior: none;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
-h1, h2, h3, .font-display {
+h1, h2, h3 {
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
 }
@@ -47,5 +77,5 @@ h1, h2, h3, .font-display {
   margin: 0 auto;
   min-height: 100dvh;
   background: var(--surface);
-  box-shadow: 0 0 40px rgba(0,0,0,0.08);
+  box-shadow: 0 0 40px rgba(0,0,0,0.10);
 }
