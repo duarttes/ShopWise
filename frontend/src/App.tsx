@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   House, Receipt, ScanSmiley, ShoppingBag, MapPin,
-  List, X, SignOut, User, ChartBar, Sun, Moon
+  List, X, SignOut, ChartBar, Sun, Moon
 } from '@phosphor-icons/react';
 import { ScanPage } from './pages/ScanPage';
 import { HomePage } from './pages/HomePage';

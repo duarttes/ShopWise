@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ScanSmiley } from '@phosphor-icons/react';
 import { getHomeInsights, updateLocation, getStoredUserId, previewNfce, importNfce } from '../services/api';
-import { Card, Button, SectionLabel, EmptyState, InsightCard } from '../components/ui';
+import { Card, SectionLabel, EmptyState, InsightCard } from '../components/ui';
 import { PageLoading } from '../components/PageLoading';
 import { PageError } from '../components/PageError';
 import { QrCodeScanner } from '../components/QrCodeScanner';
@@ -14,8 +14,6 @@ export function HomePage() {
   const [insights, setInsights] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [locating, setLocating] = useState(false);
-  const [locMsg, setLocMsg] = useState<string | null>(null);
 
   const [showScanner, setShowScanner] = useState(false);
   const [scanUrl, setScanUrl] = useState('');
@@ -49,20 +47,6 @@ export function HomePage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [userId]);
-
-  async function handleSaveLocation() {
-    if (!navigator.geolocation) return setLocMsg('Não suportado.');
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          await updateLocation(pos.coords.latitude, pos.coords.longitude);
-          setLocMsg('✓ Localização salva!');
-        } finally { setLocating(false); }
-      },
-      () => { setLocMsg('Permissão negada.'); setLocating(false); }
-    );
-  }
 
   async function handleScan(result: string) {
     setShowScanner(false);

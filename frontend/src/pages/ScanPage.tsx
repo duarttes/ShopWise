@@ -11,8 +11,8 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const [url, setUrl] = useState('');
   const [preview, setPreview] = useState<any>(null);
@@ -97,12 +97,12 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
         flexDirection: 'column',
         justifyContent: 'center',
         padding: 24,
-        background: 'linear-gradient(160deg, #f0f7f0 0%, #e8f4e8 100%)',
+        background: 'var(--surface)',
       }}>
         <div style={{ marginBottom: 36, textAlign: 'center' }}>
           <div style={{ fontSize: 56, marginBottom: 10 }}>🛍️</div>
           <h1 style={{ fontFamily: 'Nunito', fontWeight: 900, fontSize: 32, margin: '0 0 6px', color: 'var(--text)', letterSpacing: '-0.5px' }}>
-            Shop<span style={{ color: 'var(--green)' }}>Wise</span>
+            Shop<span style={{ color: 'var(--green-light)' }}>Wise</span>
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: 0 }}>
             Inteligência de preços nas suas compras
@@ -110,10 +110,11 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
         </div>
 
         <div style={{
-          background: '#fff',
+          background: 'var(--card)',
           borderRadius: 20,
           padding: 24,
-          boxShadow: '0 4px 0 var(--green-muted), 0 8px 24px rgba(80,140,80,0.10)',
+          border: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-card)',
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
@@ -132,9 +133,9 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
                   fontFamily: 'Nunito, sans-serif',
                   fontWeight: 800,
                   fontSize: 14,
-                  background: mode === m ? '#fff' : 'transparent',
-                  color: mode === m ? 'var(--green-dark)' : 'var(--text-subtle)',
-                  boxShadow: mode === m ? '0 2px 8px rgba(80,140,80,0.10)' : 'none',
+                  background: mode === m ? 'var(--card)' : 'transparent',
+                  color: mode === m ? 'var(--green-light)' : 'var(--text-subtle)',
+                  boxShadow: mode === m ? 'var(--shadow-card)' : 'none',
                   transition: 'all 0.15s',
                 }}
               >
@@ -164,8 +165,9 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
             {authLoading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
           </Button>
 
-          {error && <Toast message={error} type="error" onClose={() => setError(null)} />}
-
+          {authError && (
+            <Toast message={authError} type="error" onClose={() => setAuthError(null)} />
+          )}
         </div>
       </div>
     );
@@ -188,14 +190,12 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
         <Button onClick={() => handlePreview()} disabled={loading || !url} variant="secondary" fullWidth>
           {loading ? 'Buscando...' : 'Ver prévia'}
         </Button>
-        {error && (
-          <div style={{ fontSize: 13, color: '#ef4444', textAlign: 'center', fontFamily: 'Nunito', fontWeight: 700 }}>
-            {error}
-          </div>
-        )}
+
+        {error && <Toast message={error} type="error" onClose={() => setError(null)} />}
+
         {imported && (
           <Card>
-            <div style={{ textAlign: 'center', color: 'var(--green)', fontFamily: 'Nunito', fontWeight: 800 }}>
+            <div style={{ textAlign: 'center', color: 'var(--green-light)', fontFamily: 'Nunito', fontWeight: 800 }}>
               ✓ Nota importada com sucesso!
             </div>
           </Card>
