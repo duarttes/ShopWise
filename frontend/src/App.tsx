@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Receipt, ScanLine, ShoppingCart, MapPin } from 'lucide-react';
+import { Home, Receipt, ScanLine, ShoppingCart, MapPin, Menu, X } from 'lucide-react';
 import { ScanPage } from './pages/ScanPage';
 import { HomePage } from './pages/HomePage';
 import { ShoppingListsPage } from './pages/ShoppingListsPage';
@@ -17,13 +17,153 @@ const tabs = [
 
 function App() {
   const [tab, setTab] = useState<'home' | 'receipts' | 'scan' | 'lists' | 'map'>('home');
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const userId = getStoredUserId();
 
   if (!userId) return <ScanPage />;
 
+  const currentTab = tabs.find(t => t.id === tab)!;
+
+  function navigate(id: string) {
+    setTab(id as any);
+    setDrawerOpen(false);
+  }
+
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--surface)' }}>
-      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'var(--nav-height)' }}>
+
+      {/* Top bar */}
+      <header style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 200,
+        background: '#fff',
+        borderBottom: '1.5px solid var(--border)',
+        padding: '0 16px',
+        height: 56,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 2px 8px rgba(80,140,80,0.06)',
+        maxWidth: 480,
+        width: '100%',
+        margin: '0 auto',
+      }}>
+        <button
+          onClick={() => setDrawerOpen(true)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text)', display: 'flex', alignItems: 'center' }}
+        >
+          <Menu size={24} strokeWidth={2} />
+        </button>
+
+        <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: 20, letterSpacing: '-0.3px' }}>
+          Shop<span style={{ color: 'var(--green)' }}>Wise</span>
+        </div>
+
+        <div style={{ width: 32 }} />
+      </header>
+
+      {/* Overlay */}
+      {drawerOpen && (
+        <div
+          onClick={() => setDrawerOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.35)',
+            zIndex: 300,
+            backdropFilter: 'blur(2px)',
+          }}
+        />
+      )}
+
+      {/* Drawer */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: drawerOpen ? 0 : -280,
+        width: 260,
+        height: '100dvh',
+        background: '#fff',
+        zIndex: 400,
+        transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: drawerOpen ? '4px 0 24px rgba(0,0,0,0.12)' : 'none',
+      }}>
+        <div style={{
+          padding: '20px 20px 16px',
+          borderBottom: '1.5px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: 22, letterSpacing: '-0.3px' }}>
+            Shop<span style={{ color: 'var(--green)' }}>Wise</span>
+          </div>
+          <button
+            onClick={() => setDrawerOpen(false)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <nav style={{ flex: 1, padding: '12px 12px' }}>
+          {tabs.map(({ id, label, Icon }) => {
+            const active = tab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => navigate(id)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '12px 14px',
+                  borderRadius: 12,
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: active ? 'var(--green-light)' : 'transparent',
+                  color: active ? 'var(--green-dark)' : 'var(--text-muted)',
+                  fontFamily: 'Nunito, sans-serif',
+                  fontSize: 15,
+                  fontWeight: active ? 800 : 600,
+                  marginBottom: 4,
+                  transition: 'all 0.15s',
+                  textAlign: 'left',
+                }}
+              >
+                <Icon size={20} strokeWidth={active ? 2.5 : 1.8} />
+                {label}
+                {active && (
+                  <div style={{
+                    marginLeft: 'auto',
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: 'var(--green)',
+                  }} />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div style={{
+          padding: '16px 20px',
+          borderTop: '1.5px solid var(--border)',
+          fontSize: 12,
+          color: 'var(--text-subtle)',
+          fontFamily: 'Nunito Sans',
+        }}>
+          ShopWise · Inteligência de preços
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: 'auto', maxWidth: 480, width: '100%', margin: '0 auto' }}>
         {tab === 'home'     && <HomePage />}
         {tab === 'receipts' && <ReceiptsPage />}
         {tab === 'scan'     && <ScanPage />}
@@ -31,66 +171,6 @@ function App() {
         {tab === 'map'      && <MarketsMapPage />}
       </div>
 
-      <nav style={{
-        position: 'fixed',
-        bottom: 0,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '100%',
-        maxWidth: 480,
-        height: 'var(--nav-height)',
-        background: '#fff',
-        borderTop: '1.5px solid var(--border)',
-        display: 'flex',
-        zIndex: 100,
-        boxShadow: '0 -4px 16px rgba(80,140,80,0.08)',
-      }}>
-        {tabs.map(({ id, label, Icon }) => {
-          const active = tab === id;
-          return (
-            <button
-              key={id}
-              onClick={() => setTab(id as any)}
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 4,
-                border: 'none',
-                background: 'none',
-                cursor: 'pointer',
-                color: active ? 'var(--green)' : 'var(--text-subtle)',
-                fontSize: 10,
-                fontFamily: 'Nunito, sans-serif',
-                fontWeight: active ? 800 : 600,
-                transition: 'color 0.15s',
-                position: 'relative',
-                padding: '6px 0',
-              }}
-            >
-              {active && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: 28,
-                  height: 3,
-                  background: 'var(--green)',
-                  borderRadius: '0 0 4px 4px',
-                }} />
-              )}
-              <Icon
-                size={22}
-                strokeWidth={active ? 2.5 : 1.8}
-              />
-              {label}
-            </button>
-          );
-        })}
-      </nav>
     </div>
   );
 }
