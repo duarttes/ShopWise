@@ -17,7 +17,8 @@
     "prisma:deploy": "prisma migrate deploy",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "geocode:markets": "ts-node --require reflect-metadata src/scripts/geocode-all-markets.ts"
   },
   "keywords": [],
   "author": "",
