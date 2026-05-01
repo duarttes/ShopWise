@@ -7,6 +7,7 @@ import {
   getRecommendation,
   getStoredUserId,
 } from '../services/api';
+import { Card, Button, Input, PageHeader, SectionLabel, EmptyState } from '../components/ui';
 
 export function ShoppingListsPage() {
   const userId = getStoredUserId()!;
@@ -19,9 +20,7 @@ export function ShoppingListsPage() {
   const [loadingRec, setLoadingRec] = useState(false);
   const [recError, setRecError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchLists();
-  }, []);
+  useEffect(() => { fetchLists(); }, []);
 
   async function fetchLists() {
     setLoading(true);
@@ -79,114 +78,172 @@ export function ShoppingListsPage() {
     }
   }
 
-  if (loading) return <div className="p-4">Carregando...</div>;
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-muted)' }}>
+      Carregando...
+    </div>
+  );
 
   return (
-    <div className="max-w-xl mx-auto p-4 space-y-4 pb-20">
-      <h2 className="text-xl font-bold">Listas de compras</h2>
+    <div>
+      <PageHeader title="Listas de compras" />
 
-      <div className="flex gap-2">
-        <input
-          value={newListName}
-          onChange={(e) => setNewListName(e.target.value)}
-          placeholder="Nova lista..."
-          className="flex-1 border rounded-xl p-2 text-sm"
-        />
-        <button onClick={handleCreateList} className="bg-black text-white px-4 rounded-xl text-sm">
-          Criar
-        </button>
-      </div>
+      <div style={{ padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 24 }}>
 
-      <div className="flex gap-2 overflow-x-auto">
-        {lists.map((list) => (
-          <button
-            key={list.id}
-            onClick={() => { setSelectedList(list); setRecommendation(null); }}
-            className={`px-3 py-1 rounded-full text-sm whitespace-nowrap border ${
-              selectedList?.id === list.id ? 'bg-black text-white' : 'text-gray-600'
-            }`}
-          >
-            {list.name}
-          </button>
-        ))}
-      </div>
-
-      {selectedList && (
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <input
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
-              placeholder="Adicionar item..."
-              className="flex-1 border rounded-xl p-2 text-sm"
-              onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
-            />
-            <button onClick={handleAddItem} className="bg-black text-white px-4 rounded-xl text-sm">
-              +
-            </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ flex: 1 }}>
+            <Input value={newListName} onChange={setNewListName} placeholder="Nome da nova lista..." />
           </div>
+          <Button onClick={handleCreateList} variant="primary">Criar</Button>
+        </div>
 
-          <div className="space-y-2">
-            {selectedList.items?.length === 0 && (
-              <div className="text-gray-500 text-sm">Lista vazia.</div>
-            )}
-            {selectedList.items?.map((item: any) => (
-              <div key={item.id} className="flex items-center justify-between border rounded-xl p-3">
-                <div>
-                  <div className="text-sm font-medium">{item.name}</div>
-                  {item.product && (
-                    <div className="text-xs text-green-600">✓ produto vinculado</div>
-                  )}
-                  {!item.product && (
-                    <div className="text-xs text-gray-400">sem produto vinculado</div>
-                  )}
-                </div>
-                <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 text-sm px-2">✕</button>
-              </div>
+        {lists.length === 0 && (
+          <EmptyState icon="🛒" title="Nenhuma lista ainda" description="Crie uma lista para começar a comparar preços entre mercados." />
+        )}
+
+        {lists.length > 0 && (
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+            {lists.map((list) => (
+              <button
+                key={list.id}
+                onClick={() => { setSelectedList(list); setRecommendation(null); }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 20,
+                  border: 'none',
+                  fontSize: 13,
+                  fontFamily: 'Nunito, sans-serif',
+                  fontWeight: 700,
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  background: selectedList?.id === list.id ? 'var(--green)' : '#fff',
+                  color: selectedList?.id === list.id ? '#fff' : 'var(--text-muted)',
+                  boxShadow: selectedList?.id === list.id
+                    ? '0 3px 0 var(--green-dark), 0 5px 12px rgba(74,154,90,0.22)'
+                    : '0 3px 0 var(--green-muted), 0 4px 10px rgba(80,140,80,0.07)',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {list.name}
+              </button>
             ))}
           </div>
+        )}
 
-          {selectedList.items?.some((i: any) => i.product) && (
-            <button
-              onClick={handleGetRecommendation}
-              disabled={loadingRec}
-              className="w-full bg-green-600 text-white p-3 rounded-xl disabled:opacity-50 text-sm font-medium"
-            >
-              {loadingRec ? 'Calculando...' : '🛒 Ver onde comprar mais barato'}
-            </button>
-          )}
-
-          {recError && <div className="text-red-500 text-sm">{recError}</div>}
-
-          {recommendation?.recommendedPlan && (
-            <div className="space-y-3">
-              <div className="text-sm font-semibold">Plano recomendado</div>
-              {recommendation.recommendedPlan.markets.map((market: any) => (
-                <div key={market.marketId} className="border rounded-xl p-3 space-y-2">
-                  <div className="font-bold">{market.marketName}</div>
-                  <div className="text-green-600 font-medium">
-                    R$ {market.totalEstimated?.toFixed(2)}
-                  </div>
-                  <div className="space-y-1">
-                    {market.items.map((item: any) => (
-                      <div key={item.shoppingListItemId} className="flex justify-between text-sm text-gray-600">
-                        <span>{item.shoppingListItemName}</span>
-                        <span>R$ {item.price?.toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-
-              {recommendation.recommendedPlan.missingItemsCount > 0 && (
-                <div className="text-yellow-600 text-sm">
-                  ⚠️ {recommendation.recommendedPlan.missingItemsCount} item(s) sem preço disponível
-                </div>
-              )}
+        {selectedList && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <Input
+                  value={newItemName}
+                  onChange={setNewItemName}
+                  placeholder="Adicionar item..."
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
+                />
+              </div>
+              <Button onClick={handleAddItem} variant="secondary">+</Button>
             </div>
-          )}
-        </div>
-      )}
+
+            {selectedList.items?.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-subtle)', fontSize: 14, fontFamily: 'Nunito' }}>
+                Lista vazia — adicione itens acima
+              </div>
+            )}
+
+            {selectedList.items?.length > 0 && (
+              <div>
+                <SectionLabel>Itens ({selectedList.items.length})</SectionLabel>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {selectedList.items.map((item: any) => (
+                    <Card key={item.id}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontFamily: 'Nunito', fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>
+                            {item.name}
+                          </div>
+                          <div style={{ fontSize: 11, marginTop: 2 }}>
+                            {item.product
+                              ? <span style={{ color: 'var(--green)', fontWeight: 700 }}>✓ produto vinculado</span>
+                              : <span style={{ color: 'var(--text-subtle)' }}>sem produto vinculado</span>
+                            }
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveItem(item.id)}
+                          style={{
+                            background: '#fee2e2',
+                            border: 'none',
+                            borderRadius: 8,
+                            color: '#ef4444',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            padding: '4px 10px',
+                            cursor: 'pointer',
+                            fontFamily: 'Nunito',
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedList.items?.some((i: any) => i.product) && (
+              <Button
+                onClick={handleGetRecommendation}
+                disabled={loadingRec}
+                variant="primary"
+                fullWidth
+              >
+                {loadingRec ? 'Calculando...' : '🛒 Ver onde comprar mais barato'}
+              </Button>
+            )}
+
+            {recError && (
+              <div style={{ fontSize: 13, color: '#ef4444', textAlign: 'center', fontFamily: 'Nunito', fontWeight: 700 }}>
+                {recError}
+              </div>
+            )}
+
+            {recommendation?.recommendedPlan && (
+              <div>
+                <SectionLabel>Plano recomendado</SectionLabel>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {recommendation.recommendedPlan.markets.map((market: any) => (
+                    <Card key={market.marketId}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                        <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>
+                          {market.marketName}
+                        </div>
+                        <div style={{ fontFamily: 'Nunito', fontWeight: 900, fontSize: 18, color: 'var(--green)' }}>
+                          R$ {market.totalEstimated?.toFixed(2)}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {market.items.map((item: any) => (
+                          <div key={item.shoppingListItemId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-muted)' }}>
+                            <span>{item.shoppingListItemName}</span>
+                            <span style={{ fontWeight: 600 }}>R$ {item.price?.toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  ))}
+
+                  {recommendation.recommendedPlan.missingItemsCount > 0 && (
+                    <div style={{ fontSize: 13, color: '#d97706', fontFamily: 'Nunito', fontWeight: 700, textAlign: 'center' }}>
+                      ⚠️ {recommendation.recommendedPlan.missingItemsCount} item(s) sem preço disponível
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
