@@ -38,4 +38,9 @@ export const createProductSchema = z.object({
     .optional(),
 });
 
+export const productIdParamSchema = z.object({
+  id: z.string().uuid("Product id must be a valid UUID"),
+});
+
 export type CreateProductInput = z.infer<typeof createProductSchema>;
+export type ProductIdParamInput = z.infer<typeof productIdParamSchema>;

@@ -1,16 +1,8 @@
-/**
- * Express application setup.
- *
- * Responsibilities:
- * - initialize Express
- * - register middlewares
- * - expose Swagger
- * - register application routes
- * - register the global error handler
- */
-
+import 'reflect-metadata';
 import "dotenv/config";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import express from "express";
 import swaggerUi from "swagger-ui-express";
 import routes from "./routes";
@@ -19,23 +11,30 @@ import { errorHandler } from "./shared/middlewares/error-handler.middleware";
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+  credentials: true,
+}));
+
 app.use(express.json());
 
-/**
- * Swagger documentation endpoint.
- * Access it at /docs after the server starts.
- */
+app.use(helmet());
+
+app.use(
+  "/auth",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: { success: false, message: "Too many requests, try again later.", issues: null },
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
+
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-/**
- * Application routes.
- */
 app.use(routes);
 
-/**
- * Global error handler must be registered after routes.
- */
 app.use(errorHandler);
 
 export default app;

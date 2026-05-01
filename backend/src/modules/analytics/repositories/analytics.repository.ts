@@ -14,6 +14,12 @@ interface DateRangeFilter {
 }
 
 export class AnalyticsRepository {
+  async findUserById(userId: string) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+    });
+  }
+
   async findProductById(productId: string) {
     return prisma.product.findUnique({
       where: { id: productId },
@@ -55,12 +61,6 @@ export class AnalyticsRepository {
     }
 
     return Array.from(latestByMarket.values()).sort((a, b) => a.price - b.price);
-  }
-
-  async findUserById(userId: string) {
-    return prisma.user.findUnique({
-      where: { id: userId },
-    });
   }
 
   async findUserReceipts(userId: string, filters?: DateRangeFilter) {
@@ -137,6 +137,32 @@ export class AnalyticsRepository {
         product: true,
         receipt: true,
       },
+    });
+  }
+
+  async findPriceRecordsForProducts(productIds: string[]) {
+    if (productIds.length === 0) {
+      return [];
+    }
+
+    return prisma.priceRecord.findMany({
+      where: {
+        productId: {
+          in: productIds,
+        },
+      },
+      include: {
+        product: true,
+        market: true,
+      },
+      orderBy: [
+        {
+          productId: "asc",
+        },
+        {
+          observedAt: "desc",
+        },
+      ],
     });
   }
 }

@@ -1,14 +1,3 @@
-/**
- * Nominatim geocoding provider.
- *
- * Uses OpenStreetMap Nominatim search API for MVP geocoding.
- *
- * Important:
- * - keep request volume very low
- * - identify the application with a valid User-Agent
- * - add caching later if usage grows
- */
-
 import { GeocodeAddressInput, GeocodeAddressResult, GeocodingProvider } from "../geocoding.types";
 
 interface NominatimSearchResult {
@@ -19,32 +8,42 @@ interface NominatimSearchResult {
 
 export class NominatimGeocodingProvider implements GeocodingProvider {
   async geocode(input: GeocodeAddressInput): Promise<GeocodeAddressResult | null> {
+    const rawAddress = input.address?.trim() ?? '';
+
+    const cleanAddress = rawAddress
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .filter((s, i, arr) => arr.indexOf(s) === i)
+      .slice(0, 2)
+      .join(', ');
+
     const parts = [
-      input.address?.trim(),
+      cleanAddress || null,
       input.city?.trim(),
       input.state?.trim(),
-      input.country?.trim() ?? "Brazil",
+      input.country?.trim() ?? 'Brazil',
     ].filter(Boolean);
 
     if (parts.length === 0) {
       return null;
     }
 
-    const query = parts.join(", ");
-    const url = new URL("https://nominatim.openstreetmap.org/search");
-    url.searchParams.set("q", query);
-    url.searchParams.set("format", "jsonv2");
-    url.searchParams.set("limit", "1");
-    url.searchParams.set("addressdetails", "1");
-    url.searchParams.set("countrycodes", "br");
+    const query = parts.join(', ');
+    const url = new URL('https://nominatim.openstreetmap.org/search');
+    url.searchParams.set('q', query);
+    url.searchParams.set('format', 'jsonv2');
+    url.searchParams.set('limit', '1');
+    url.searchParams.set('addressdetails', '1');
+    url.searchParams.set('countrycodes', 'br');
 
     const response = await fetch(url.toString(), {
-      method: "GET",
+      method: 'GET',
       headers: {
-        "User-Agent":
+        'User-Agent':
           process.env.GEOCODING_USER_AGENT ||
-          "ShopWise/1.0 (contact: unknown@example.com)",
-        Accept: "application/json",
+          'ShopWise/1.0 (contact: unknown@example.com)',
+        Accept: 'application/json',
       },
     });
 
@@ -70,7 +69,7 @@ export class NominatimGeocodingProvider implements GeocodingProvider {
       latitude,
       longitude,
       formattedAddress: first.display_name ?? null,
-      provider: "nominatim",
+      provider: 'nominatim',
     };
   }
 }

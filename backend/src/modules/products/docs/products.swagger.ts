@@ -29,7 +29,7 @@
  *                 example: banana nanica
  *               brand:
  *                 type: string
- *                 example: Generic
+ *                 example: Camil
  *               category:
  *                 type: string
  *                 example: Fruits
@@ -70,6 +70,26 @@
  *     responses:
  *       200:
  *         description: Product retrieved successfully
+ *       404:
+ *         description: Product not found
+ */
+
+/**
+ * @swagger
+ * /products/{id}/market-comparison:
+ *   get:
+ *     summary: Compare the latest observed prices of a product across markets
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product id
+ *     responses:
+ *       200:
+ *         description: Product market comparison retrieved successfully
  *       404:
  *         description: Product not found
  */

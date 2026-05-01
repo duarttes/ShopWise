@@ -109,4 +109,20 @@ export class MarketsRepository {
       take: 20,
     });
   }
+
+  async findAll() {
+  return prisma.market.findMany({
+    orderBy: { name: 'asc' },
+    select: {
+      id: true,
+      name: true,
+      displayName: true,
+      city: true,
+      state: true,
+      address: true,
+      latitude: true,
+      longitude: true,
+    },
+  });
+}
 }
