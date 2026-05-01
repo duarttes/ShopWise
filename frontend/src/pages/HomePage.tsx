@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ScanSmiley } from '@phosphor-icons/react';
-import { getHomeInsights, updateLocation, getStoredUserId, previewNfce, importNfce } from '../services/api';
+import {
+  getHomeInsights,
+  updateLocation,
+  getStoredUserId,
+  previewNfce,
+  importNfce,
+  getMe,
+  updateMarketDisplayName,
+} from '../services/api';
 import { Card, SectionLabel, EmptyState, InsightCard } from '../components/ui';
 import { PageLoading } from '../components/PageLoading';
 import { PageError } from '../components/PageError';
@@ -8,12 +16,27 @@ import { QrCodeScanner } from '../components/QrCodeScanner';
 import { ReceiptPreviewCard } from '../components/ReceiptPreviewCard';
 import { Toast } from '../components/Toast';
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Bom dia';
+  if (hour >= 12 && hour < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+function getGreetingEmoji() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return '☀️';
+  if (hour >= 12 && hour < 18) return '🌤️';
+  return '🌙';
+}
+
 export function HomePage() {
   const userId = getStoredUserId();
 
   const [insights, setInsights] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('');
 
   const [showScanner, setShowScanner] = useState(false);
   const [scanUrl, setScanUrl] = useState('');
@@ -23,6 +46,15 @@ export function HomePage() {
   const [scanError, setScanError] = useState<string | null>(null);
   const [imported, setImported] = useState(false);
   const [importedMarket, setImportedMarket] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    getMe()
+      .then((res) => {
+        const firstName = res.data?.name?.split(' ')[0] ?? '';
+        setUserName(firstName);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -63,17 +95,27 @@ export function HomePage() {
     }
   }
 
-  async function handleImport() {
+  async function handleImport(customMarketName?: string) {
     try {
       setImporting(true);
       const res = await importNfce(scanUrl);
-      setImportedMarket({
+      const market = {
         id: res.data?.receipt?.marketId ?? res.data?.receipt?.market?.id ?? '',
         name: res.data?.receipt?.market?.name ?? '',
-      });
+      };
+
+      if (customMarketName?.trim() && market.id) {
+        try {
+          await updateMarketDisplayName(market.id, customMarketName.trim());
+          market.name = customMarketName.trim();
+        } catch {}
+      }
+
+      setImportedMarket(market);
       setImported(true);
       setPreview(null);
       setScanUrl('');
+
       if (userId) {
         const updated = await getHomeInsights(userId);
         setInsights(updated.data);
@@ -113,9 +155,14 @@ export function HomePage() {
       }}>
         <div style={{ position: 'absolute', top: -60, left: -60, width: 200, height: 200, background: 'var(--glow-1)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: 20, right: -40, width: 160, height: 160, background: 'var(--glow-2)', pointerEvents: 'none' }} />
-        <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-muted)', fontFamily: 'Nunito Sans', position: 'relative' }}>
-          bom dia 👋 — resumo do mês
-        </p>
+
+        <div style={{ marginBottom: 14, position: 'relative' }}>
+          <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 18, color: 'var(--text)', lineHeight: 1.2 }}>
+            {getGreeting()}{userName ? `, ${userName}` : ''} {getGreetingEmoji()}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>resumo do mês</div>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, position: 'relative' }}>
           {stats.map((item) => (
             <div key={item.label} style={{

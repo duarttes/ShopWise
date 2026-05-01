@@ -5,7 +5,7 @@ import { PencilSimple, Check } from '@phosphor-icons/react';
 
 interface Props {
   preview: any;
-  onConfirm: () => void;
+  onConfirm: (customMarketName?: string) => void;
   loading: boolean;
   importedMarket?: { id: string; name: string } | null;
 }
@@ -15,15 +15,15 @@ export function ReceiptPreviewCard({ preview, onConfirm, loading, importedMarket
   const alreadyImported = preview?.duplicateCheck?.alreadyImported;
 
   const [editingName, setEditingName] = useState(false);
-  const [displayName, setDisplayName] = useState(importedMarket?.name ?? issuer?.name ?? '');
-  const [savingName, setSavingName] = useState(false);
+  const [customName, setCustomName] = useState('');
   const [nameSaved, setNameSaved] = useState(false);
+  const [savingName, setSavingName] = useState(false);
 
-  async function handleSaveName() {
-    if (!importedMarket?.id || !displayName.trim()) return;
+  async function handleSaveNameAfterImport() {
+    if (!importedMarket?.id || !customName.trim()) return;
     setSavingName(true);
     try {
-      await updateMarketDisplayName(importedMarket.id, displayName.trim());
+      await updateMarketDisplayName(importedMarket.id, customName.trim());
       setNameSaved(true);
       setEditingName(false);
     } catch {} finally {
@@ -39,71 +39,65 @@ export function ReceiptPreviewCard({ preview, onConfirm, loading, importedMarket
             Mercado
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-            <div>
-              <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 16, color: 'var(--text)', lineHeight: 1.3 }}>
-                {nameSaved ? displayName : issuer?.name}
+          {!editingName ? (
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 15, color: 'var(--text)', lineHeight: 1.3 }}>
+                  {nameSaved && customName ? customName : customName || issuer?.name}
+                </div>
+                {customName && !nameSaved && (
+                  <div style={{ fontSize: 11, color: 'var(--text-subtle)', marginTop: 1 }}>
+                    original: {issuer?.name}
+                  </div>
+                )}
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{issuer?.cnpj}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{issuer?.address}</div>
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{issuer?.cnpj}</div>
-            </div>
-
-            {/* Botão de renomear só aparece após importar */}
-            {importedMarket && !editingName && (
               <button
-                onClick={() => setEditingName(true)}
+                onClick={() => { setCustomName(customName || issuer?.name || ''); setEditingName(true); }}
                 style={{
-                  background: 'var(--insight-bg)',
-                  border: '1px solid var(--insight-border)',
-                  borderRadius: 8,
-                  padding: '5px 10px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  color: 'var(--amber)',
-                  fontSize: 11,
-                  fontFamily: 'Nunito',
-                  fontWeight: 700,
-                  whiteSpace: 'nowrap',
+                  background: 'var(--insight-bg)', border: '1px solid var(--insight-border)',
+                  borderRadius: 8, padding: '5px 10px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  color: 'var(--amber)', fontSize: 11, fontFamily: 'Nunito', fontWeight: 700,
+                  whiteSpace: 'nowrap', flexShrink: 0,
                 }}
               >
                 <PencilSimple size={13} weight="duotone" />
                 Renomear
               </button>
-            )}
-          </div>
-
-          {editingName && (
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
                 autoFocus
                 placeholder="Nome do mercado..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (importedMarket) handleSaveNameAfterImport();
+                    else setEditingName(false);
+                  }
+                  if (e.key === 'Escape') setEditingName(false);
+                }}
                 style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  borderRadius: 10,
+                  flex: 1, padding: '8px 12px', borderRadius: 10,
                   border: '1.5px solid var(--border-strong)',
-                  background: 'var(--card)',
-                  color: 'var(--text)',
-                  fontFamily: 'Nunito Sans',
-                  fontSize: 14,
-                  outline: 'none',
+                  background: 'var(--card)', color: 'var(--text)',
+                  fontFamily: 'Nunito Sans', fontSize: 14, outline: 'none',
                 }}
               />
               <button
-                onClick={handleSaveName}
+                onClick={() => {
+                  if (importedMarket) handleSaveNameAfterImport();
+                  else setEditingName(false);
+                }}
                 disabled={savingName}
                 style={{
-                  padding: '8px 12px',
-                  borderRadius: 10,
-                  border: 'none',
-                  background: 'var(--green)',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
+                  padding: '8px 12px', borderRadius: 10, border: 'none',
+                  background: 'var(--green)', color: '#fff',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center',
                 }}
               >
                 <Check size={16} weight="bold" />
@@ -120,14 +114,9 @@ export function ReceiptPreviewCard({ preview, onConfirm, loading, importedMarket
 
         {alreadyImported && (
           <div style={{
-            marginBottom: 10,
-            padding: '8px 12px',
-            background: 'rgba(200,152,74,0.10)',
-            borderRadius: 10,
-            fontSize: 13,
-            color: 'var(--amber)',
-            fontFamily: 'Nunito',
-            fontWeight: 700,
+            marginBottom: 10, padding: '8px 12px',
+            background: 'rgba(200,152,74,0.10)', borderRadius: 10,
+            fontSize: 13, color: 'var(--amber)', fontFamily: 'Nunito', fontWeight: 700,
           }}>
             ⚠️ Essa nota já foi importada anteriormente.
           </div>
@@ -178,22 +167,19 @@ export function ReceiptPreviewCard({ preview, onConfirm, loading, importedMarket
       )}
 
       {!alreadyImported && !importedMarket && (
-        <Button onClick={onConfirm} disabled={loading} variant="primary" fullWidth>
+        <Button onClick={() => onConfirm(customName || undefined)} disabled={loading} variant="primary" fullWidth>
           {loading ? 'Importando...' : '✓ Confirmar importação'}
         </Button>
       )}
 
-      {importedMarket && (
+      {importedMarket && !alreadyImported && (
         <div style={{
           padding: '12px 16px',
           background: 'rgba(74,180,110,0.10)',
           border: '1px solid rgba(74,180,110,0.20)',
-          borderRadius: 14,
-          textAlign: 'center',
-          fontFamily: 'Nunito',
-          fontWeight: 700,
-          color: 'var(--green-light)',
-          fontSize: 14,
+          borderRadius: 14, textAlign: 'center',
+          fontFamily: 'Nunito', fontWeight: 700,
+          color: 'var(--green-light)', fontSize: 14,
         }}>
           ✓ Nota importada com sucesso!
         </div>
