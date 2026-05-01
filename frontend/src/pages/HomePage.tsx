@@ -1,16 +1,28 @@
 import { useEffect, useState } from 'react';
-import { getHomeInsights, updateLocation, getStoredUserId } from '../services/api';
+import { ScanSmiley } from '@phosphor-icons/react';
+import { getHomeInsights, updateLocation, getStoredUserId, previewNfce, importNfce } from '../services/api';
 import { Card, Button, SectionLabel, EmptyState, InsightCard } from '../components/ui';
 import { PageLoading } from '../components/PageLoading';
 import { PageError } from '../components/PageError';
+import { QrCodeScanner } from '../components/QrCodeScanner';
+import { ReceiptPreviewCard } from '../components/ReceiptPreviewCard';
 
 export function HomePage() {
+  const userId = getStoredUserId();
+
   const [insights, setInsights] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [locMsg, setLocMsg] = useState<string | null>(null);
-  const userId = getStoredUserId();
+
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanUrl, setScanUrl] = useState('');
+  const [preview, setPreview] = useState<any>(null);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [imported, setImported] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -35,6 +47,41 @@ export function HomePage() {
     );
   }
 
+  async function handleScan(result: string) {
+    setShowScanner(false);
+    setScanUrl(result);
+    setScanLoading(true);
+    setScanError(null);
+    setPreview(null);
+    setImported(false);
+    try {
+      const res = await previewNfce(result);
+      setPreview(res.data);
+    } catch (err: any) {
+      setScanError(err.message);
+    } finally {
+      setScanLoading(false);
+    }
+  }
+
+  async function handleImport() {
+    try {
+      setImporting(true);
+      await importNfce(scanUrl);
+      setImported(true);
+      setPreview(null);
+      setScanUrl('');
+      if (userId) {
+        const res = await getHomeInsights(userId);
+        setInsights(res.data);
+      }
+    } catch (err: any) {
+      setScanError(err.message);
+    } finally {
+      setImporting(false);
+    }
+  }
+
   if (loading) return <PageLoading />;
   if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;
 
@@ -46,8 +93,22 @@ export function HomePage() {
 
   return (
     <div style={{ paddingBottom: 24 }}>
+
+      {showScanner && (
+        <QrCodeScanner
+          onScan={handleScan}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
+
       {/* Header */}
-      <div style={{ background: 'var(--header-bg)', padding: '16px 16px 20px', borderBottom: '1px solid var(--border)', position: 'relative', overflow: 'hidden' }}>
+      <div style={{
+        background: 'var(--header-bg)',
+        padding: '16px 16px 20px',
+        borderBottom: '1px solid var(--border)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
         <div style={{ position: 'absolute', top: -60, left: -60, width: 200, height: 200, background: 'var(--glow-1)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: 20, right: -40, width: 160, height: 160, background: 'var(--glow-2)', pointerEvents: 'none' }} />
         <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-muted)', fontFamily: 'Nunito Sans', position: 'relative' }}>
@@ -69,6 +130,62 @@ export function HomePage() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Scan CTA */}
+      <div style={{ padding: '16px 16px 0' }}>
+        <button
+          onClick={() => {
+            setPreview(null);
+            setScanError(null);
+            setImported(false);
+            setShowScanner(true);
+          }}
+          disabled={scanLoading}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            padding: '15px 20px',
+            borderRadius: 16,
+            border: 'none',
+            cursor: scanLoading ? 'not-allowed' : 'pointer',
+            opacity: scanLoading ? 0.7 : 1,
+            background: 'var(--green)',
+            color: '#fff',
+            fontFamily: 'Nunito, sans-serif',
+            fontSize: 16,
+            fontWeight: 800,
+            boxShadow: 'var(--shadow-btn)',
+          }}
+        >
+          <ScanSmiley size={22} weight="duotone" />
+          {scanLoading ? 'Lendo nota...' : 'Escanear nota fiscal'}
+        </button>
+
+        {scanError && (
+          <div style={{ marginTop: 10, fontSize: 13, color: '#e05050', textAlign: 'center', fontFamily: 'Nunito', fontWeight: 700 }}>
+            {scanError}
+          </div>
+        )}
+
+        {imported && (
+          <div style={{ marginTop: 10, fontSize: 14, color: 'var(--green-light)', textAlign: 'center', fontFamily: 'Nunito', fontWeight: 700 }}>
+            ✓ Nota importada com sucesso!
+          </div>
+        )}
+
+        {preview && (
+          <div style={{ marginTop: 12 }}>
+            <ReceiptPreviewCard
+              preview={preview}
+              onConfirm={handleImport}
+              loading={importing}
+            />
+          </div>
+        )}
       </div>
 
       <div style={{ padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -129,8 +246,12 @@ export function HomePage() {
           </div>
         )}
 
-        {!insights?.topMarket && (
-          <EmptyState icon="🛒" title="Nenhuma compra ainda" description="Importe sua primeira nota fiscal para ver seus insights aqui." />
+        {!insights?.topMarket && !preview && !imported && (
+          <EmptyState
+            icon="🛒"
+            title="Nenhuma compra ainda"
+            description="Escaneie sua primeira nota fiscal para ver seus insights aqui."
+          />
         )}
 
         <div>
@@ -149,6 +270,7 @@ export function HomePage() {
             )}
           </Card>
         </div>
+
       </div>
     </div>
   );

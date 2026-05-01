@@ -173,7 +173,7 @@ function App() {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        {tab === 'home'      && <HomePage />}
+        {tab === 'home' && <HomePage />}
         {tab === 'receipts'  && <ReceiptsPage />}
         {tab === 'scan'      && <ScanPage onLoginSuccess={handleLoginSuccess} />}
         {tab === 'analytics' && <AnalyticsPage />}
