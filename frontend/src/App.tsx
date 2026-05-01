@@ -1,25 +1,28 @@
 import { useState, useEffect } from 'react';
-import { Home, Receipt, ScanLine, ShoppingCart, MapPin, Menu, X, LogOut, User } from 'lucide-react';
+import { Home, Receipt, ScanLine, ShoppingCart, MapPin, Menu, X, LogOut, User, BarChart2} from 'lucide-react';
 import { ScanPage } from './pages/ScanPage';
 import { HomePage } from './pages/HomePage';
 import { ShoppingListsPage } from './pages/ShoppingListsPage';
 import { ReceiptsPage } from './pages/ReceiptsPage';
 import { MarketsMapPage } from './pages/MarketsMapPage';
 import { getStoredUserId, logout, getMe } from './services/api';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 
 const tabs = [
-  { id: 'home',     label: 'Início',   Icon: Home },
-  { id: 'receipts', label: 'Notas',    Icon: Receipt },
-  { id: 'scan',     label: 'Escanear', Icon: ScanLine },
-  { id: 'lists',    label: 'Listas',   Icon: ShoppingCart },
-  { id: 'map',      label: 'Mapa',     Icon: MapPin },
+  { id: 'home',      label: 'Início',    Icon: Home },
+  { id: 'receipts',  label: 'Notas',     Icon: Receipt },
+  { id: 'scan',      label: 'Escanear',  Icon: ScanLine },
+  { id: 'analytics', label: 'Análises',  Icon: BarChart2 },
+  { id: 'lists',     label: 'Listas',    Icon: ShoppingCart },
+  { id: 'map',       label: 'Mapa',      Icon: MapPin },
 ];
 
 function App() {
-  const [tab, setTab] = useState<'home' | 'receipts' | 'scan' | 'lists' | 'map'>('home');
+  const [tab, setTab] = useState<'home' | 'receipts' | 'scan' | 'analytics' | 'lists' | 'map'>('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(getStoredUserId());
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  
 
   useEffect(() => {
     if (!userId) return;
@@ -211,6 +214,7 @@ function App() {
         {tab === 'scan'     && <ScanPage onLoginSuccess={handleLoginSuccess} />}
         {tab === 'lists'    && <ShoppingListsPage />}
         {tab === 'map'      && <MarketsMapPage />}
+        {tab === 'analytics' && <AnalyticsPage />}
       </div>
     </div>
   );

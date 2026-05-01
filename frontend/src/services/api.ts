@@ -194,3 +194,21 @@ export async function getMe() {
   if (!response.ok) throw new Error('Erro ao buscar perfil');
   return response.json();
 }
+
+export async function getMonthlySpending(userId: string) {
+  const response = await apiFetch(`${API_URL}/analytics/users/${userId}/monthly-spending`);
+  if (!response.ok) throw new Error('Erro ao buscar gastos mensais');
+  return response.json();
+}
+
+export async function getSpendingByMarket(userId: string) {
+  const response = await apiFetch(`${API_URL}/analytics/users/${userId}/spending-by-market`);
+  if (!response.ok) throw new Error('Erro ao buscar gastos por mercado');
+  return response.json();
+}
+
+export async function getMostExpensiveProducts(userId: string) {
+  const response = await apiFetch(`${API_URL}/analytics/users/${userId}/most-expensive-products`);
+  if (!response.ok) throw new Error('Erro ao buscar produtos');
+  return response.json();
+}
