@@ -109,7 +109,7 @@ export function AnalyticsPage() {
                     width={60}
                   />
                   <Tooltip
-                    formatter={(v: number) => [`R$ ${v.toFixed(2)}`, 'Gasto']}
+                    formatter={(v: any) => typeof v === 'number' && v !== undefined ? `R$ ${v.toFixed(2)}` : ''}
                     labelStyle={{ fontFamily: 'Nunito', fontWeight: 700 }}
                     contentStyle={{
                       borderRadius: 10,
@@ -152,7 +152,10 @@ export function AnalyticsPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(v: number) => [`R$ ${v.toFixed(2)}`, 'Gasto']}
+                    formatter={(value: any) => {
+                      const amount = typeof value === 'number' ? value : Number(value ?? 0);
+                      return [`R$ ${amount.toFixed(2)}`, 'Gasto'];
+                    }}
                     contentStyle={{
                       borderRadius: 10,
                       border: '1px solid #c8e0c8',
