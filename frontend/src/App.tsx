@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Home, Receipt, ScanLine, ShoppingCart, MapPin, Menu, X, LogOut } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Home, Receipt, ScanLine, ShoppingCart, MapPin, Menu, X, LogOut, User } from 'lucide-react';
 import { ScanPage } from './pages/ScanPage';
 import { HomePage } from './pages/HomePage';
 import { ShoppingListsPage } from './pages/ShoppingListsPage';
 import { ReceiptsPage } from './pages/ReceiptsPage';
 import { MarketsMapPage } from './pages/MarketsMapPage';
-import { getStoredUserId, logout } from './services/api';
+import { getStoredUserId, logout, getMe } from './services/api';
 
 const tabs = [
   { id: 'home',     label: 'Início',   Icon: Home },
@@ -19,10 +19,17 @@ function App() {
   const [tab, setTab] = useState<'home' | 'receipts' | 'scan' | 'lists' | 'map'>('home');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(getStoredUserId());
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+
+  useEffect(() => {
+    if (!userId) return;
+    getMe().then((res) => setUser(res.data)).catch(() => {});
+  }, [userId]);
 
   function handleLoginSuccess() {
     setUserId(getStoredUserId());
     setTab('home');
+    getMe().then((res) => setUser(res.data)).catch(() => {});
   }
 
   function navigate(id: string) {
@@ -88,6 +95,7 @@ function App() {
         flexDirection: 'column',
         boxShadow: drawerOpen ? '4px 0 24px rgba(0,0,0,0.12)' : 'none',
       }}>
+
         <div style={{
           padding: '20px 20px 16px',
           borderBottom: '1.5px solid var(--border)',
@@ -95,8 +103,28 @@ function App() {
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
-          <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: 22, letterSpacing: '-0.3px' }}>
-            Shop<span style={{ color: 'var(--green)' }}>Wise</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 38,
+              height: 38,
+              borderRadius: '50%',
+              background: 'var(--green-light)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--green)',
+              flexShrink: 0,
+            }}>
+              <User size={18} strokeWidth={2} />
+            </div>
+            <div>
+              <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 14, color: 'var(--text)', lineHeight: 1.2 }}>
+                {user?.name ?? '...'}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-subtle)', lineHeight: 1.2 }}>
+                {user?.email ?? ''}
+              </div>
+            </div>
           </div>
           <button
             onClick={() => setDrawerOpen(false)}

@@ -188,3 +188,9 @@ export async function register(name: string, email: string, password: string) {
 
   return response.json();
 }
+
+export async function getMe() {
+  const response = await apiFetch(`${API_URL}/users/me`);
+  if (!response.ok) throw new Error('Erro ao buscar perfil');
+  return response.json();
+}

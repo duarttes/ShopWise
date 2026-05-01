@@ -122,6 +122,32 @@ export function HomePage() {
           </div>
         )}
 
+        {insights?.priceHighlights?.biggestRecentIncreases?.length > 0 && (
+          <div>
+            <SectionLabel>Maiores altas recentes</SectionLabel>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {insights.priceHighlights.biggestRecentIncreases.slice(0, 3).map((item: any) => (
+                <Card key={item.productId}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontFamily: 'Nunito', fontWeight: 700, fontSize: 14 }}>{item.productName}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{item.marketName}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 15, color: '#ef4444' }}>
+                        R$ {item.price?.toFixed(2)}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#ef4444' }}>
+                        +{item.increasePercentage}%
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
         {!insights?.topMarket && (
           <EmptyState
             icon="🛒"
