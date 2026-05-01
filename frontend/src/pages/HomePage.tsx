@@ -37,26 +37,15 @@ export function HomePage() {
   );
 
   return (
-    <div style={{ paddingBottom: 16 }}>
+    <div style={{ paddingBottom: 24 }}>
       <div style={{
         background: 'linear-gradient(160deg, #f0f7f0 0%, #e8f4e8 100%)',
-        padding: '28px 20px 20px',
+        padding: '16px 20px 20px',
         borderBottom: '1.5px solid var(--border)',
       }}>
-        <p style={{ margin: '0 0 2px', fontSize: 12, color: 'var(--text-muted)', fontFamily: 'Nunito Sans' }}>
-          bom dia 👋
+        <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-muted)', fontFamily: 'Nunito Sans' }}>
+          bom dia 👋 — resumo do mês
         </p>
-        <h1 style={{
-          fontFamily: 'Nunito, sans-serif',
-          fontWeight: 900,
-          fontSize: 28,
-          margin: '0 0 16px',
-          color: 'var(--text)',
-          letterSpacing: '-0.3px',
-        }}>
-          Shop<span style={{ color: 'var(--green)' }}>Wise</span>
-        </h1>
-
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
           {[
             { label: 'este mês', value: `R$ ${insights?.month?.totalSpent?.toFixed(2) ?? '0.00'}`, accent: true },
