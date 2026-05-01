@@ -22,20 +22,17 @@ export function HomePage() {
   const [importing, setImporting] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [imported, setImported] = useState(false);
-  const hasMonthData = (insights?.month?.totalSpent ?? 0) > 0 || (insights?.month?.receiptsCount ?? 0) > 0;
+  const [importedMarket, setImportedMarket] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (!userId) return;
     if (!navigator.geolocation) return;
-
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        try {
-          await updateLocation(pos.coords.latitude, pos.coords.longitude);
-        } catch {}
+        try { await updateLocation(pos.coords.latitude, pos.coords.longitude); } catch {}
       },
       undefined,
-      { timeout: 8000, maximumAge: 1000 * 60 * 10 } // cache 10 min
+      { timeout: 8000, maximumAge: 1000 * 60 * 10 }
     );
   }, [userId]);
 
@@ -55,6 +52,7 @@ export function HomePage() {
     setScanError(null);
     setPreview(null);
     setImported(false);
+    setImportedMarket(null);
     try {
       const res = await previewNfce(result);
       setPreview(res.data);
@@ -68,13 +66,17 @@ export function HomePage() {
   async function handleImport() {
     try {
       setImporting(true);
-      await importNfce(scanUrl);
+      const res = await importNfce(scanUrl);
+      setImportedMarket({
+        id: res.data?.receipt?.marketId ?? res.data?.receipt?.market?.id ?? '',
+        name: res.data?.receipt?.market?.name ?? '',
+      });
       setImported(true);
       setPreview(null);
       setScanUrl('');
       if (userId) {
-        const res = await getHomeInsights(userId);
-        setInsights(res.data);
+        const updated = await getHomeInsights(userId);
+        setInsights(updated.data);
       }
     } catch (err: any) {
       setScanError(err.message);
@@ -86,32 +88,19 @@ export function HomePage() {
   if (loading) return <PageLoading />;
   if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;
 
+  const hasMonthData = (insights?.month?.totalSpent ?? 0) > 0 || (insights?.month?.receiptsCount ?? 0) > 0;
+
   const stats = [
-    {
-      label: 'este mês',
-      value: `R$ ${insights?.month?.totalSpent?.toFixed(2) ?? '0.00'}`,
-      color: 'var(--green-light)',
-    },
-    {
-      label: 'notas',
-      value: String(insights?.month?.receiptsCount ?? 0),
-      color: 'var(--text)',
-    },
-    {
-      label: 'mercados',
-      value: String(insights?.month?.marketsCount ?? 0),
-      color: 'var(--amber-light)',
-    },
+    { label: 'este mês', value: `R$ ${insights?.month?.totalSpent?.toFixed(2) ?? '0.00'}`, color: 'var(--green-light)' },
+    { label: 'notas', value: String(insights?.month?.receiptsCount ?? 0), color: 'var(--text)' },
+    { label: 'mercados', value: String(insights?.month?.marketsCount ?? 0), color: 'var(--amber-light)' },
   ];
 
   return (
     <div style={{ paddingBottom: 24 }}>
 
       {showScanner && (
-        <QrCodeScanner
-          onScan={handleScan}
-          onClose={() => setShowScanner(false)}
-        />
+        <QrCodeScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
       )}
 
       {/* Header */}
@@ -148,19 +137,12 @@ export function HomePage() {
       {!hasMonthData && insights?.topMarket && (
         <div style={{ padding: '8px 16px 0' }}>
           <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            background: 'var(--insight-bg)',
-            border: '1px solid var(--insight-border)',
-            borderRadius: 20,
-            padding: '4px 12px',
-            fontSize: 11,
-            color: 'var(--amber)',
-            fontFamily: 'Nunito',
-            fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'var(--insight-bg)', border: '1px solid var(--insight-border)',
+            borderRadius: 20, padding: '4px 12px',
+            fontSize: 11, color: 'var(--amber)', fontFamily: 'Nunito', fontWeight: 700,
           }}>
-            📊 Exibindo dados históricos — sem compras em maio
+            📊 Exibindo dados históricos
           </div>
         </div>
       )}
@@ -172,25 +154,17 @@ export function HomePage() {
             setPreview(null);
             setScanError(null);
             setImported(false);
+            setImportedMarket(null);
             setShowScanner(true);
           }}
           disabled={scanLoading}
           style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            padding: '15px 20px',
-            borderRadius: 16,
-            border: 'none',
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: 10, padding: '15px 20px', borderRadius: 16, border: 'none',
             cursor: scanLoading ? 'not-allowed' : 'pointer',
             opacity: scanLoading ? 0.7 : 1,
-            background: 'var(--green)',
-            color: '#fff',
-            fontFamily: 'Nunito, sans-serif',
-            fontSize: 16,
-            fontWeight: 800,
+            background: 'var(--green)', color: '#fff',
+            fontFamily: 'Nunito, sans-serif', fontSize: 16, fontWeight: 800,
             boxShadow: 'var(--shadow-btn)',
           }}
         >
@@ -200,12 +174,13 @@ export function HomePage() {
 
         {scanError && <Toast message={scanError} type="error" onClose={() => setScanError(null)} />}
 
-        {preview && (
+        {(preview || imported) && (
           <div style={{ marginTop: 12 }}>
             <ReceiptPreviewCard
-              preview={preview}
+              preview={preview ?? {}}
               onConfirm={handleImport}
               loading={importing}
+              importedMarket={imported ? importedMarket : null}
             />
           </div>
         )}
@@ -269,13 +244,13 @@ export function HomePage() {
           </div>
         )}
 
-          {!insights?.topMarket && !insights?.priceHighlights?.lowestRecentPrices?.length && !preview && !imported && (
-            <EmptyState
-              icon="🛒"
-              title="Nenhuma compra ainda"
-              description="Escaneie sua primeira nota fiscal para ver seus insights aqui."
-            />
-          )}
+        {!insights?.topMarket && !insights?.priceHighlights?.lowestRecentPrices?.length && !preview && !imported && (
+          <EmptyState
+            icon="🛒"
+            title="Nenhuma compra ainda"
+            description="Escaneie sua primeira nota fiscal para ver seus insights aqui."
+          />
+        )}
 
       </div>
     </div>

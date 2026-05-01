@@ -21,6 +21,7 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
   const [imported, setImported] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
+  const [importedMarket, setImportedMarket] = useState<{ id: string; name: string } | null>(null);
 
   async function handleLogin() {
     try {
@@ -72,7 +73,11 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
   async function handleImport() {
     try {
       setImporting(true);
-      await importNfce(url);
+      const res = await importNfce(url);
+      setImportedMarket({
+        id: res.data?.receipt?.marketId ?? res.data?.receipt?.market?.id,
+        name: res.data?.receipt?.market?.name ?? '',
+      });
       setImported(true);
       setPreview(null);
       setUrl('');
@@ -200,7 +205,14 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
             </div>
           </Card>
         )}
-        {preview && <ReceiptPreviewCard preview={preview} onConfirm={handleImport} loading={importing} />}
+        {preview && (
+          <ReceiptPreviewCard
+            preview={preview}
+            onConfirm={handleImport}
+            loading={importing}
+            importedMarket={imported ? importedMarket : null}
+          />
+        )}
       </div>
     </div>
   );
