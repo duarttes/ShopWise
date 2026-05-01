@@ -173,3 +173,18 @@ export function logout() {
   localStorage.removeItem('userId');
   window.location.reload();
 }
+
+export async function register(name: string, email: string, password: string) {
+  const response = await fetch(`${API_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, password }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.message || 'Erro ao criar conta');
+  }
+
+  return response.json();
+}
