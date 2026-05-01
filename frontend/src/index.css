@@ -1,3 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind utilities;
+
 :root {
   --green: #4a9a5a;
   --green-dark: #347a44;
@@ -10,4 +15,37 @@
   --text: #1a2e1a;
   --text-muted: #6a8a6a;
   --text-subtle: #90aa90;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #e8ede8;
+}
+
+body {
+  color: var(--text);
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  overscroll-behavior: none;
+}
+
+h1, h2, h3, .font-display {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+}
+
+#root {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  background: var(--surface);
+  box-shadow: 0 0 40px rgba(0,0,0,0.08);
 }

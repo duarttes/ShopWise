@@ -33,22 +33,20 @@ function App() {
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--surface)' }}>
 
       {/* Top bar */}
-      <header style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 200,
-        background: '#fff',
-        borderBottom: '1.5px solid var(--border)',
-        padding: '0 16px',
-        height: 56,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        boxShadow: '0 2px 8px rgba(80,140,80,0.06)',
-        maxWidth: 480,
-        width: '100%',
-        margin: '0 auto',
-      }}>
+        
+        <header style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 200,
+          background: '#fff',
+          borderBottom: '1.5px solid var(--border)',
+          padding: '0 16px',
+          height: 56,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 2px 8px rgba(80,140,80,0.06)',
+        }}>
         <button
           onClick={() => setDrawerOpen(true)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text)', display: 'flex', alignItems: 'center' }}
@@ -163,7 +161,8 @@ function App() {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto', maxWidth: 480, width: '100%', margin: '0 auto' }}>
+      // Substitui o div do content por:
+      <div style={{ flex: 1, overflowY: 'auto' }}>
         {tab === 'home'     && <HomePage />}
         {tab === 'receipts' && <ReceiptsPage />}
         {tab === 'scan'     && <ScanPage />}
