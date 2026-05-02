@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { previewNfce, importNfce, login, register, getStoredUserId } from '../services/api';
+import { previewNfce, importNfce, login, register, getStoredUserId, updateMarketDisplayName } from '../services/api';
 import { ReceiptPreviewCard } from '../components/ReceiptPreviewCard';
 import { QrCodeScanner } from '../components/QrCodeScanner';
 import { Button, Input, Card, PageHeader } from '../components/ui';
@@ -19,6 +19,7 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [imported, setImported] = useState(false);
+  const [importedMarket, setImportedMarket] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
 
@@ -60,6 +61,7 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
       setError(null);
       setPreview(null);
       setImported(false);
+      setImportedMarket(null);
       const res = await previewNfce(target);
       setPreview(res.data);
     } catch (err: any) {
@@ -69,10 +71,23 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
     }
   }
 
-  async function handleImport() {
+  async function handleImport(customMarketName?: string) {
     try {
       setImporting(true);
-      await importNfce(url);
+      const res = await importNfce(url);
+      const market = {
+        id: res.data?.receipt?.marketId ?? res.data?.receipt?.market?.id ?? '',
+        name: res.data?.receipt?.market?.name ?? '',
+      };
+
+      if (customMarketName?.trim() && market.id) {
+        try {
+          await updateMarketDisplayName(market.id, customMarketName.trim());
+          market.name = customMarketName.trim();
+        } catch {}
+      }
+
+      setImportedMarket(market);
       setImported(true);
       setPreview(null);
       setUrl('');
@@ -125,14 +140,8 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
                 key={m}
                 onClick={() => { setMode(m); setAuthError(null); }}
                 style={{
-                  flex: 1,
-                  padding: '8px 0',
-                  borderRadius: 10,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'Nunito, sans-serif',
-                  fontWeight: 800,
-                  fontSize: 14,
+                  flex: 1, padding: '8px 0', borderRadius: 10, border: 'none',
+                  cursor: 'pointer', fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 14,
                   background: mode === m ? 'var(--card)' : 'transparent',
                   color: mode === m ? 'var(--green-light)' : 'var(--text-subtle)',
                   boxShadow: mode === m ? 'var(--shadow-card)' : 'none',
@@ -165,9 +174,7 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
             {authLoading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
           </Button>
 
-          {authError && (
-            <Toast message={authError} type="error" onClose={() => setAuthError(null)} />
-          )}
+          {authError && <Toast message={authError} type="error" onClose={() => setAuthError(null)} />}
         </div>
       </div>
     );
@@ -193,14 +200,22 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
 
         {error && <Toast message={error} type="error" onClose={() => setError(null)} />}
 
-        {imported && (
+        {imported && !preview && (
           <Card>
             <div style={{ textAlign: 'center', color: 'var(--green-light)', fontFamily: 'Nunito', fontWeight: 800 }}>
               ✓ Nota importada com sucesso!
             </div>
           </Card>
         )}
-        {preview && <ReceiptPreviewCard preview={preview} onConfirm={handleImport} loading={importing} />}
+
+        {(preview || imported) && (
+          <ReceiptPreviewCard
+            preview={preview ?? {}}
+            onConfirm={handleImport}
+            loading={importing}
+            importedMarket={imported ? importedMarket : null}
+          />
+        )}
       </div>
     </div>
   );

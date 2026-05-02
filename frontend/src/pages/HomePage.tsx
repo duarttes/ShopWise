@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ScanSmiley } from '@phosphor-icons/react';
-import { getHomeInsights, updateLocation, getStoredUserId, previewNfce, importNfce } from '../services/api';
+import {
+  getHomeInsights,
+  updateLocation,
+  getStoredUserId,
+  previewNfce,
+  importNfce,
+  getMe,
+  updateMarketDisplayName,
+} from '../services/api';
 import { Card, SectionLabel, EmptyState, InsightCard } from '../components/ui';
 import { PageLoading } from '../components/PageLoading';
 import { PageError } from '../components/PageError';
@@ -8,12 +16,27 @@ import { QrCodeScanner } from '../components/QrCodeScanner';
 import { ReceiptPreviewCard } from '../components/ReceiptPreviewCard';
 import { Toast } from '../components/Toast';
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Bom dia';
+  if (hour >= 12 && hour < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+function getGreetingEmoji() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return '☀️';
+  if (hour >= 12 && hour < 18) return '🌤️';
+  return '🌙';
+}
+
 export function HomePage() {
   const userId = getStoredUserId();
 
   const [insights, setInsights] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('');
 
   const [showScanner, setShowScanner] = useState(false);
   const [scanUrl, setScanUrl] = useState('');
@@ -22,20 +45,26 @@ export function HomePage() {
   const [importing, setImporting] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [imported, setImported] = useState(false);
-  const hasMonthData = (insights?.month?.totalSpent ?? 0) > 0 || (insights?.month?.receiptsCount ?? 0) > 0;
+  const [importedMarket, setImportedMarket] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    getMe()
+      .then((res) => {
+        const firstName = res.data?.name?.split(' ')[0] ?? '';
+        setUserName(firstName);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
     if (!navigator.geolocation) return;
-
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        try {
-          await updateLocation(pos.coords.latitude, pos.coords.longitude);
-        } catch {}
+        try { await updateLocation(pos.coords.latitude, pos.coords.longitude); } catch {}
       },
       undefined,
-      { timeout: 8000, maximumAge: 1000 * 60 * 10 } // cache 10 min
+      { timeout: 8000, maximumAge: 1000 * 60 * 10 }
     );
   }, [userId]);
 
@@ -55,6 +84,7 @@ export function HomePage() {
     setScanError(null);
     setPreview(null);
     setImported(false);
+    setImportedMarket(null);
     try {
       const res = await previewNfce(result);
       setPreview(res.data);
@@ -65,16 +95,30 @@ export function HomePage() {
     }
   }
 
-  async function handleImport() {
+  async function handleImport(customMarketName?: string) {
     try {
       setImporting(true);
-      await importNfce(scanUrl);
+      const res = await importNfce(scanUrl);
+      const market = {
+        id: res.data?.receipt?.marketId ?? res.data?.receipt?.market?.id ?? '',
+        name: res.data?.receipt?.market?.name ?? '',
+      };
+
+      if (customMarketName?.trim() && market.id) {
+        try {
+          await updateMarketDisplayName(market.id, customMarketName.trim());
+          market.name = customMarketName.trim();
+        } catch {}
+      }
+
+      setImportedMarket(market);
       setImported(true);
       setPreview(null);
       setScanUrl('');
+
       if (userId) {
-        const res = await getHomeInsights(userId);
-        setInsights(res.data);
+        const updated = await getHomeInsights(userId);
+        setInsights(updated.data);
       }
     } catch (err: any) {
       setScanError(err.message);
@@ -86,32 +130,19 @@ export function HomePage() {
   if (loading) return <PageLoading />;
   if (error) return <PageError message={error} onRetry={() => window.location.reload()} />;
 
+  const hasMonthData = (insights?.month?.totalSpent ?? 0) > 0 || (insights?.month?.receiptsCount ?? 0) > 0;
+
   const stats = [
-    {
-      label: 'este mês',
-      value: `R$ ${insights?.month?.totalSpent?.toFixed(2) ?? '0.00'}`,
-      color: 'var(--green-light)',
-    },
-    {
-      label: 'notas',
-      value: String(insights?.month?.receiptsCount ?? 0),
-      color: 'var(--text)',
-    },
-    {
-      label: 'mercados',
-      value: String(insights?.month?.marketsCount ?? 0),
-      color: 'var(--amber-light)',
-    },
+    { label: 'este mês', value: `R$ ${insights?.month?.totalSpent?.toFixed(2) ?? '0.00'}`, color: 'var(--green-light)' },
+    { label: 'notas', value: String(insights?.month?.receiptsCount ?? 0), color: 'var(--text)' },
+    { label: 'mercados', value: String(insights?.month?.marketsCount ?? 0), color: 'var(--amber-light)' },
   ];
 
   return (
     <div style={{ paddingBottom: 24 }}>
 
       {showScanner && (
-        <QrCodeScanner
-          onScan={handleScan}
-          onClose={() => setShowScanner(false)}
-        />
+        <QrCodeScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
       )}
 
       {/* Header */}
@@ -124,9 +155,14 @@ export function HomePage() {
       }}>
         <div style={{ position: 'absolute', top: -60, left: -60, width: 200, height: 200, background: 'var(--glow-1)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: 20, right: -40, width: 160, height: 160, background: 'var(--glow-2)', pointerEvents: 'none' }} />
-        <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-muted)', fontFamily: 'Nunito Sans', position: 'relative' }}>
-          bom dia 👋 — resumo do mês
-        </p>
+
+        <div style={{ marginBottom: 14, position: 'relative' }}>
+          <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 18, color: 'var(--text)', lineHeight: 1.2 }}>
+            {getGreeting()}{userName ? `, ${userName}` : ''} {getGreetingEmoji()}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>resumo do mês</div>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, position: 'relative' }}>
           {stats.map((item) => (
             <div key={item.label} style={{
@@ -148,19 +184,12 @@ export function HomePage() {
       {!hasMonthData && insights?.topMarket && (
         <div style={{ padding: '8px 16px 0' }}>
           <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            background: 'var(--insight-bg)',
-            border: '1px solid var(--insight-border)',
-            borderRadius: 20,
-            padding: '4px 12px',
-            fontSize: 11,
-            color: 'var(--amber)',
-            fontFamily: 'Nunito',
-            fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'var(--insight-bg)', border: '1px solid var(--insight-border)',
+            borderRadius: 20, padding: '4px 12px',
+            fontSize: 11, color: 'var(--amber)', fontFamily: 'Nunito', fontWeight: 700,
           }}>
-            📊 Exibindo dados históricos — sem compras em maio
+            📊 Exibindo dados históricos
           </div>
         </div>
       )}
@@ -172,25 +201,17 @@ export function HomePage() {
             setPreview(null);
             setScanError(null);
             setImported(false);
+            setImportedMarket(null);
             setShowScanner(true);
           }}
           disabled={scanLoading}
           style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            padding: '15px 20px',
-            borderRadius: 16,
-            border: 'none',
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: 10, padding: '15px 20px', borderRadius: 16, border: 'none',
             cursor: scanLoading ? 'not-allowed' : 'pointer',
             opacity: scanLoading ? 0.7 : 1,
-            background: 'var(--green)',
-            color: '#fff',
-            fontFamily: 'Nunito, sans-serif',
-            fontSize: 16,
-            fontWeight: 800,
+            background: 'var(--green)', color: '#fff',
+            fontFamily: 'Nunito, sans-serif', fontSize: 16, fontWeight: 800,
             boxShadow: 'var(--shadow-btn)',
           }}
         >
@@ -200,12 +221,13 @@ export function HomePage() {
 
         {scanError && <Toast message={scanError} type="error" onClose={() => setScanError(null)} />}
 
-        {preview && (
+        {(preview || imported) && (
           <div style={{ marginTop: 12 }}>
             <ReceiptPreviewCard
-              preview={preview}
+              preview={preview ?? {}}
               onConfirm={handleImport}
               loading={importing}
+              importedMarket={imported ? importedMarket : null}
             />
           </div>
         )}
@@ -269,13 +291,13 @@ export function HomePage() {
           </div>
         )}
 
-          {!insights?.topMarket && !insights?.priceHighlights?.lowestRecentPrices?.length && !preview && !imported && (
-            <EmptyState
-              icon="🛒"
-              title="Nenhuma compra ainda"
-              description="Escaneie sua primeira nota fiscal para ver seus insights aqui."
-            />
-          )}
+        {!insights?.topMarket && !insights?.priceHighlights?.lowestRecentPrices?.length && !preview && !imported && (
+          <EmptyState
+            icon="🛒"
+            title="Nenhuma compra ainda"
+            description="Escaneie sua primeira nota fiscal para ver seus insights aqui."
+          />
+        )}
 
       </div>
     </div>
