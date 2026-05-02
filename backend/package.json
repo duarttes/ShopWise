@@ -40,8 +40,6 @@
     "node-fetch": "^3.3.2",
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
-    "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1",
     "tsyringe": "^4.10.0",
     "zod": "^4.3.6"
   },
