@@ -1,0 +1,210 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/**
+ * User
+ * Represents an app user.
+ * In the MVP, users can create receipts and shopping lists.
+ */
+model User {
+  id                     String   @id @default(uuid())
+  name                   String
+  email                  String   @unique
+  passwordHash           String
+  recommendationStrategy String?  @default("balanced")
+  homeLatitude           Float?
+  homeLongitude          Float?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  receipts      Receipt[]
+  shoppingLists ShoppingList[]
+
+  @@map("users")
+}
+
+/**
+ * Market
+ * Represents a grocery market or supermarket.
+ * This model stores identity and optional location data.
+ */
+model Market {
+  id          String   @id @default(uuid())
+  name        String
+  displayName String?
+  cnpj        String?  @unique
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  receipts     Receipt[]
+  priceRecords PriceRecord[]
+
+  @@index([name])
+  @@index([city, state])
+  @@map("markets")
+}
+
+/**
+ * Receipt
+ * Represents a receipt submitted by a user.
+ * Receipts are the main source of real-world price data in ShopWise.
+ */
+model Receipt {
+  id              String        @id @default(uuid())
+  userId          String
+  marketId        String
+  externalCode    String?       @unique
+  sourceType      ReceiptSource @default(MANUAL)
+  totalAmount     Float
+  purchasedAt     DateTime
+  parsingScore    Float?
+  parsingWarnings String[]      @default([])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  market Market        @relation(fields: [marketId], references: [id], onDelete: Restrict)
+  items  ReceiptItem[]
+
+  @@index([userId])
+  @@index([marketId])
+  @@index([purchasedAt])
+  @@map("receipts")
+}
+
+/**
+ * ReceiptItem
+ * Stores each line item found in a receipt.
+ * nameRaw preserves the original text from the receipt.
+ */
+model ReceiptItem {
+  id         String   @id @default(uuid())
+  receiptId  String
+  productId  String?
+  nameRaw    String
+  unit       String?
+  quantity   Float?
+  unitPrice  Float
+  totalPrice Float?
+  createdAt  DateTime @default(now())
+
+  receipt      Receipt       @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  product      Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  priceRecords PriceRecord[]
+
+  @@index([receiptId])
+  @@index([productId])
+  @@index([nameRaw])
+  @@map("receipt_items")
+}
+
+/**
+ * Product
+ * Represents a normalized product in the system.
+ * normalizedName should be the canonical version used for comparisons.
+ */
+model Product {
+  id             String   @id @default(uuid())
+  name           String
+  normalizedName String   @unique
+  brand          String?
+  category       String?
+  unit           String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  receiptItems      ReceiptItem[]
+  priceRecords      PriceRecord[]
+  shoppingListItems ShoppingListItem[]
+
+  @@index([name])
+  @@index([normalizedName])
+  @@index([category])
+  @@map("products")
+}
+
+/**
+ * PriceRecord
+ * Represents an observed price for a product in a market at a specific time.
+ * This is the main historical table used by recommendations and analytics.
+ */
+model PriceRecord {
+  id            String   @id @default(uuid())
+  productId     String
+  marketId      String
+  receiptItemId String?
+  price         Float
+  observedAt    DateTime
+  createdAt     DateTime @default(now())
+
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  market      Market       @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  receiptItem ReceiptItem? @relation(fields: [receiptItemId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([marketId])
+  @@index([observedAt])
+  @@index([productId, marketId, observedAt])
+  @@map("price_records")
+}
+
+/**
+ * ShoppingList
+ * Represents a shopping list created by a user.
+ */
+model ShoppingList {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items ShoppingListItem[]
+
+  @@index([userId])
+  @@map("shopping_lists")
+}
+
+/**
+ * ShoppingListItem
+ * Represents one desired item inside a shopping list.
+ * productId is optional in the MVP to keep list creation flexible.
+ */
+model ShoppingListItem {
+  id             String   @id @default(uuid())
+  shoppingListId String
+  productId      String?
+  name           String
+  quantity       Float?
+  unit           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  shoppingList ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  product      Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([shoppingListId])
+  @@index([productId])
+  @@index([name])
+  @@map("shopping_list_items")
+}
+
+enum ReceiptSource {
+  MANUAL
+  QR_CODE
+  IMPORTED
+}
