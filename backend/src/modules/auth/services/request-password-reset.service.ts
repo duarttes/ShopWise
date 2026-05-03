@@ -3,17 +3,14 @@ import { prisma } from "../../../shared/infra/prisma";
 import { Resend } from "resend";
 import crypto from "crypto";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export class RequestPasswordResetService {
   async execute(email: string) {
     const user = await prisma.user.findUnique({ where: { email } });
 
-    // Não revela se o email existe ou não — segurança
     if (!user) return;
 
     const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 hora
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60);
 
     await prisma.passwordResetToken.upsert({
       where: { userId: user.id },
@@ -22,6 +19,9 @@ export class RequestPasswordResetService {
     });
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+
+    // Inicializa o Resend apenas quando necessário
+    const resend = new Resend(process.env.RESEND_API_KEY);
 
     await resend.emails.send({
       from: "ShopWise <noreply@shopwise.app>",
