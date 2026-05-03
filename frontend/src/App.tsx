@@ -11,6 +11,7 @@ import { MarketsMapPage } from './pages/MarketsMapPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { getStoredUserId, logout, getMe } from './services/api';
 import { useTheme } from './contexts/ThemeContext';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 
 const tabs = [
   { id: 'home',      label: 'Início',   Icon: House },
@@ -42,6 +43,10 @@ function App() {
   function navigate(id: string) {
     setTab(id as any);
     setDrawerOpen(false);
+  }
+
+  if (window.location.pathname === '/reset-password') {
+    return <ResetPasswordPage />;
   }
 
   if (!userId) return <ScanPage onLoginSuccess={handleLoginSuccess} />;
