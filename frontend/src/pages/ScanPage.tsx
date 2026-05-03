@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { previewNfce, importNfce, login, register, getStoredUserId, updateMarketDisplayName } from '../services/api';
+import { previewNfce, importNfce, login, register, getStoredUserId, updateMarketDisplayName, forgotPassword } from '../services/api';
 import { ReceiptPreviewCard } from '../components/ReceiptPreviewCard';
 import { QrCodeScanner } from '../components/QrCodeScanner';
 import { Button, Input, Card, PageHeader } from '../components/ui';
@@ -22,6 +22,10 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
   const [importedMarket, setImportedMarket] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
+
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
 
   async function handleLogin() {
     try {
@@ -48,6 +52,19 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
       onLoginSuccess?.();
     } catch (err: any) {
       setAuthError(err.message || 'Erro ao criar conta.');
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    try {
+      setAuthLoading(true);
+      await forgotPassword(forgotEmail);
+      setForgotSent(true);
+    } catch {
+      // silencioso por segurança
+      setForgotSent(true);
     } finally {
       setAuthLoading(false);
     }
@@ -173,6 +190,42 @@ export function ScanPage({ onLoginSuccess }: { onLoginSuccess?: () => void } = {
           >
             {authLoading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
           </Button>
+
+          {mode === 'login' && !forgotMode && (
+            <button
+              onClick={() => setForgotMode(true)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-subtle)', fontSize: 12, fontFamily: 'Nunito', textAlign: 'center', width: '100%' }}
+            >
+              Esqueci minha senha
+            </button>
+          )}
+
+          {forgotMode && !forgotSent && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
+                Digite seu email e enviaremos um link para redefinir sua senha.
+              </p>
+              <Input type="email" value={forgotEmail} onChange={setForgotEmail} placeholder="Seu email" />
+              <Button onClick={handleForgotPassword} disabled={authLoading || !forgotEmail} variant="primary" fullWidth>
+                {authLoading ? 'Enviando...' : 'Enviar link'}
+              </Button>
+              <button onClick={() => setForgotMode(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-subtle)', fontSize: 12, fontFamily: 'Nunito' }}>
+                Voltar ao login
+              </button>
+            </div>
+          )}
+
+          {forgotSent && (
+            <div style={{ textAlign: 'center', padding: '8px 0' }}>
+              <div style={{ fontSize: 24, marginBottom: 8 }}>📧</div>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                Se este email estiver cadastrado, você receberá um link em breve.
+              </p>
+              <button onClick={() => { setForgotMode(false); setForgotSent(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--green-light)', fontSize: 13, fontFamily: 'Nunito', fontWeight: 700, marginTop: 8 }}>
+                Voltar ao login
+              </button>
+            </div>
+          )}
 
           {authError && <Toast message={authError} type="error" onClose={() => setAuthError(null)} />}
         </div>

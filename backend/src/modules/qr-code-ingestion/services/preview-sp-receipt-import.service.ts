@@ -56,14 +56,19 @@ export class PreviewSpReceiptImportService {
       : null;
     
         // Busca mercado existente pelo CNPJ
-    const cnpj = parsedReceipt.issuer.cnpj?.replace(/\D/g, '') ?? null;
+        const cnpj = parsedReceipt.issuer.cnpj?.replace(/\D/g, '') ?? null;
 
-    const existingMarket = cnpj
-      ? await prisma.market.findFirst({
-          where: { cnpj: { contains: cnpj } },
-          select: { id: true, name: true, displayName: true },
-        })
-      : null;
+        const existingMarket = cnpj
+          ? await prisma.market.findFirst({
+              where: { cnpj: { contains: cnpj } },
+              select: {
+                id: true,
+                name: true,
+                displayName: true,
+              },
+            })
+          : null;
+
     const resolvedItems = await Promise.all(
       parsedReceipt.items.map(async (item) => {
         const matchedProduct = await resolveProductByName(item.nameRaw);

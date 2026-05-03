@@ -214,6 +214,15 @@ exports.Prisma.ShoppingListItemScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.PasswordResetTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  token: 'token',
+  expiresAt: 'expiresAt',
+  used: 'used',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -242,7 +251,8 @@ exports.Prisma.ModelName = {
   Product: 'Product',
   PriceRecord: 'PriceRecord',
   ShoppingList: 'ShoppingList',
-  ShoppingListItem: 'ShoppingListItem'
+  ShoppingListItem: 'ShoppingListItem',
+  PasswordResetToken: 'PasswordResetToken'
 };
 
 /**

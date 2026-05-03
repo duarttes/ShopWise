@@ -221,3 +221,23 @@ export async function updateMarketDisplayName(marketId: string, displayName: str
   if (!response.ok) throw new Error('Erro ao atualizar nome do mercado');
   return response.json();
 }
+
+export async function forgotPassword(email: string) {
+  const response = await fetch(`${API_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!response.ok) throw new Error('Erro ao solicitar redefinição');
+  return response.json();
+}
+
+export async function resetPassword(token: string, password: string) {
+  const response = await fetch(`${API_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  });
+  if (!response.ok) throw new Error('Token inválido ou expirado');
+  return response.json();
+}
