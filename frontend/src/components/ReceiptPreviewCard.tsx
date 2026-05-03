@@ -15,7 +15,9 @@ export function ReceiptPreviewCard({ preview, onConfirm, loading, importedMarket
   const alreadyImported = preview?.duplicateCheck?.alreadyImported;
 
   const [editingName, setEditingName] = useState(false);
-  const [customName, setCustomName] = useState('');
+  const [customName, setCustomName] = useState(
+    preview?.market?.displayName ?? preview?.market?.name ?? issuer?.name ?? ''
+  );
   const [nameSaved, setNameSaved] = useState(false);
   const [savingName, setSavingName] = useState(false);
 
