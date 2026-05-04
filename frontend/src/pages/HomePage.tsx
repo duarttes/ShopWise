@@ -15,6 +15,7 @@ import { PageError } from '../components/PageError';
 import { QrCodeScanner } from '../components/QrCodeScanner';
 import { ReceiptPreviewCard } from '../components/ReceiptPreviewCard';
 import { Toast } from '../components/Toast';
+import { PriceHistoryDrawer } from '../components/PriceHistoryDrawer';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -37,7 +38,7 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
-
+  const [selectedProduct, setSelectedProduct] = useState<{ id: string; name: string } | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [scanUrl, setScanUrl] = useState('');
   const [preview, setPreview] = useState<any>(null);
@@ -137,6 +138,14 @@ export function HomePage() {
     { label: 'notas', value: String(insights?.month?.receiptsCount ?? 0), color: 'var(--text)' },
     { label: 'mercados', value: String(insights?.month?.marketsCount ?? 0), color: 'var(--amber-light)' },
   ];
+
+  {selectedProduct && (
+    <PriceHistoryDrawer
+      productId={selectedProduct.id}
+      productName={selectedProduct.name}
+      onClose={() => setSelectedProduct(null)}
+    />
+  )}
 
   return (
     <div style={{ paddingBottom: 24 }}>
@@ -251,7 +260,11 @@ export function HomePage() {
             <SectionLabel>Melhores preços recentes</SectionLabel>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {insights.priceHighlights.lowestRecentPrices.slice(0, 3).map((item: any) => (
-                <Card key={item.productId}>
+                <Card
+                  key={item.productId}
+                  onClick={() => setSelectedProduct({ id: item.productId, name: item.productName })}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontFamily: 'Nunito', fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{item.productName}</div>
@@ -272,17 +285,18 @@ export function HomePage() {
             <SectionLabel>Maiores altas recentes</SectionLabel>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {insights.priceHighlights.biggestRecentIncreases.slice(0, 3).map((item: any) => (
-                <Card key={item.productId}>
+                <Card
+                  key={item.productId}
+                  onClick={() => setSelectedProduct({ id: item.productId, name: item.productName })}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontFamily: 'Nunito', fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{item.productName}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{item.marketName}</div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 15, color: '#e05050' }}>
-                        R$ {item.price?.toFixed(2)}
-                      </div>
-                      <div style={{ fontSize: 11, color: '#e05050' }}>+{item.increasePercentage}%</div>
+                    <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 17, color: 'var(--green-light)' }}>
+                      R$ {item.price?.toFixed(2)}
                     </div>
                   </div>
                 </Card>
