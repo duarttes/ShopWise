@@ -1,19 +1,29 @@
 import React from 'react';
 
-export function Card({ children, className = '', style = {} }: {
+export function Card({
+  children,
+  className,
+  style,
+  onClick,
+}: {
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
+  onClick?: () => void;
 }) {
   return (
-    <div style={{
-      background: 'var(--card)',
-      borderRadius: 16,
-      padding: 14,
-      border: '1px solid var(--border)',
-      boxShadow: 'var(--shadow-card)',
-      ...style,
-    }} className={className}>
+    <div
+      onClick={onClick}
+      className={className}
+      style={{
+        background: 'var(--card)',
+        borderRadius: 16,
+        padding: '14px 16px',
+        border: '1px solid var(--border)',
+        boxShadow: 'var(--shadow-card)',
+        ...style,
+      }}
+    >
       {children}
     </div>
   );

@@ -241,3 +241,15 @@ export async function resetPassword(token: string, password: string) {
   if (!response.ok) throw new Error('Token inválido ou expirado');
   return response.json();
 }
+
+export async function getProductPriceHistory(productId: string) {
+  const response = await apiFetch(`${API_URL}/products/${productId}/price-history`);
+  if (!response.ok) throw new Error('Erro ao buscar histórico');
+  return response.json();
+}
+
+export async function getProductMarketComparison(productId: string) {
+  const response = await apiFetch(`${API_URL}/products/${productId}/market-comparison`);
+  if (!response.ok) throw new Error('Erro ao buscar comparação');
+  return response.json();
+}

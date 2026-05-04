@@ -10,6 +10,8 @@ import { getProductByIdController } from "../modules/products/controllers/get-pr
 import { getProductMarketComparisonController } from "../modules/products/controllers/get-product-market-comparison.controller";
 import { listProductsController } from "../modules/products/controllers/list-products.controller";
 import { searchProductsController } from "../modules/products/controllers/search-products.controller";
+import { getProductPriceHistoryController } from "../modules/products/controllers/get-product-price-history.controller";
+
 
 const productsRoutes = Router();
 
@@ -18,5 +20,6 @@ productsRoutes.get("/:id/market-comparison", getProductMarketComparisonControlle
 productsRoutes.post("/", createProductController);
 productsRoutes.get("/", listProductsController);
 productsRoutes.get("/:id", getProductByIdController);
+productsRoutes.get("/:id/price-history", getProductPriceHistoryController);
 
 export default productsRoutes;
