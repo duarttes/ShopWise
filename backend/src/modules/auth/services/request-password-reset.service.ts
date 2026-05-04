@@ -24,7 +24,7 @@ export class RequestPasswordResetService {
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     await resend.emails.send({
-      from: "ShopWise <noreply@shopwise.app>",
+      from: "ShopWise <onboarding@resend.dev>",
       to: email,
       subject: "Redefinição de senha — ShopWise",
       html: `

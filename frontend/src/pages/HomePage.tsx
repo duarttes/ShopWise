@@ -39,6 +39,7 @@ export function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
   const [selectedProduct, setSelectedProduct] = useState<{ id: string; name: string } | null>(null);
+
   const [showScanner, setShowScanner] = useState(false);
   const [scanUrl, setScanUrl] = useState('');
   const [preview, setPreview] = useState<any>(null);
@@ -139,16 +140,16 @@ export function HomePage() {
     { label: 'mercados', value: String(insights?.month?.marketsCount ?? 0), color: 'var(--amber-light)' },
   ];
 
-  {selectedProduct && (
-    <PriceHistoryDrawer
-      productId={selectedProduct.id}
-      productName={selectedProduct.name}
-      onClose={() => setSelectedProduct(null)}
-    />
-  )}
-
   return (
     <div style={{ paddingBottom: 24 }}>
+
+      {selectedProduct && (
+        <PriceHistoryDrawer
+          productId={selectedProduct.id}
+          productName={selectedProduct.name}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
 
       {showScanner && (
         <QrCodeScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
@@ -295,8 +296,11 @@ export function HomePage() {
                       <div style={{ fontFamily: 'Nunito', fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{item.productName}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{item.marketName}</div>
                     </div>
-                    <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 17, color: 'var(--green-light)' }}>
-                      R$ {item.price?.toFixed(2)}
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 15, color: '#e05050' }}>
+                        R$ {item.price?.toFixed(2)}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#e05050' }}>+{item.increasePercentage}%</div>
                     </div>
                   </div>
                 </Card>
