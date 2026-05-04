@@ -202,26 +202,48 @@ export class CreateReceiptService {
       throw new AppError("Receipt could not be loaded after creation", 500);
     }
 
-    let priceRecordsCreated = 0;
+let priceRecordsCreated = 0;
 
-    for (const item of createdReceipt.items) {
-      if (item.productId) {
+// Agrupa por productId para evitar duplicatas na mesma nota
+const uniqueProductPrices = new Map<string, { price: number; itemId: string }>();
+
+for (const item of createdReceipt.items) {
+  if (item.productId && !uniqueProductPrices.has(item.productId)) {
+    uniqueProductPrices.set(item.productId, {
+      price: item.unitPrice,
+      itemId: item.id,
+    });
+  }
+}
+
+const purchasedDate = new Date(data.purchasedAt);
+const startOfDay = new Date(purchasedDate);
+startOfDay.setHours(0, 0, 0, 0);
+const endOfDay = new Date(purchasedDate);
+endOfDay.setHours(23, 59, 59, 999);
+  for (const [productId, { price, itemId }] of uniqueProductPrices.entries()) {
+    // Verifica se já existe registro do mesmo produto/mercado no mesmo dia
+      const existing = await prisma.priceRecord.findFirst({
+        where: {
+          productId,
+          marketId: market.id,
+          observedAt: {
+            gte: startOfDay,
+            lte: endOfDay,
+          },
+        },
+      });
+
+      if (!existing) {
         await prisma.priceRecord.create({
           data: {
-            product: {
-              connect: { id: item.productId },
-            },
-            market: {
-              connect: { id: market.id },
-            },
-            receiptItem: {
-              connect: { id: item.id },
-            },
-            price: item.unitPrice,
-            observedAt: new Date(data.purchasedAt),
+            product: { connect: { id: productId } },
+            market: { connect: { id: market.id } },
+            receiptItem: { connect: { id: itemId } },
+            price,
+            observedAt: purchasedDate,
           },
         });
-
         priceRecordsCreated += 1;
       }
     }

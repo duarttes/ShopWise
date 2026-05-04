@@ -42,8 +42,10 @@ interface MarketRecommendationEntry {
     productId: string;
     productName: string;
     price: number;
+    priceUpdatedAt: Date;
   }>;
   recommendationScore: number;
+  oldestPriceUpdatedAt: Date | null;
 }
 
 export class GetShoppingListRecommendationService {
@@ -134,6 +136,7 @@ export class GetShoppingListRecommendationService {
         productId: priceRecord.product.id,
         productName: priceRecord.product.name,
         price: priceRecord.price,
+        priceUpdatedAt: priceRecord.observedAt,
       }));
 
       if (!existing) {
@@ -184,6 +187,12 @@ export class GetShoppingListRecommendationService {
         market.longitude
       );
 
+      // Pega a data mais antiga entre os preços — indica o menos atualizado
+      const dates = market.matchedItems.map((i) => new Date(i.priceUpdatedAt));
+      const oldestPriceUpdatedAt = dates.length
+        ? new Date(Math.min(...dates.map((d) => d.getTime())))
+        : null;
+
       return {
         marketId: market.marketId,
         marketName: market.marketName,
@@ -195,6 +204,7 @@ export class GetShoppingListRecommendationService {
         distanceKm,
         matchedItems: market.matchedItems,
         recommendationScore: 0,
+        oldestPriceUpdatedAt,
       };
     });
 

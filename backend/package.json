@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "geocode:markets": "ts-node --require reflect-metadata src/scripts/geocode-all-markets.ts"
+    "geocode:markets": "ts-node --require reflect-metadata src/scripts/geocode-all-markets.ts",
+    "deduplicate:prices": "ts-node --require reflect-metadata src/scripts/deduplicate-price-records.ts"
   },
   "keywords": [],
   "author": "",

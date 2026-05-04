@@ -266,12 +266,14 @@ export function HomePage() {
                   onClick={() => setSelectedProduct({ id: item.productId, name: item.productName })}
                   style={{ cursor: 'pointer' }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontFamily: 'Nunito', fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{item.productName}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'Nunito', fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.productName}
+                      </div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{item.marketName}</div>
                     </div>
-                    <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 17, color: 'var(--green-light)' }}>
+                    <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 17, color: 'var(--green-light)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                       R$ {item.price?.toFixed(2)}
                     </div>
                   </div>
@@ -291,13 +293,15 @@ export function HomePage() {
                   onClick={() => setSelectedProduct({ id: item.productId, name: item.productName })}
                   style={{ cursor: 'pointer' }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontFamily: 'Nunito', fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{item.productName}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'Nunito', fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.productName}
+                      </div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{item.marketName}</div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 15, color: '#e05050' }}>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 15, color: '#e05050', whiteSpace: 'nowrap' }}>
                         R$ {item.price?.toFixed(2)}
                       </div>
                       <div style={{ fontSize: 11, color: '#e05050' }}>+{item.increasePercentage}%</div>
