@@ -85,26 +85,40 @@ export class GetUserHomeInsightsService {
     const biggestRecentIncreases: ProductPriceIncreaseSnapshot[] = [];
 
     for (const [productId, records] of groupedByProduct.entries()) {
+      // Precisa ter pelo menos 2 registros para comparar
+      if (records.length < 2) continue;
+
+      // Mais recente
       const latestRecord = records[0];
       if (!latestRecord) continue;
 
-      lowestRecentPrices.push({
-        productId,
-        productName: latestRecord.product.name,
-        brand: latestRecord.product.brand,
-        category: latestRecord.product.category,
-        marketId: latestRecord.market.id,
-        marketName: latestRecord.market.displayName ?? latestRecord.market.name,
-        price: latestRecord.price,
-        observedAt: latestRecord.observedAt,
-      });
+      // Menor preço histórico entre todos os registros
+      const lowestHistoricalPrice = Math.min(...records.map(r => r.price));
 
+      // Maior preço histórico entre todos os registros  
       const previousRecord = records[1];
-      if (!previousRecord) continue;
 
+      const marketName = latestRecord.market.displayName ?? latestRecord.market.name;
+
+      // Melhores preços: preço mais recente É o menor preço histórico
+      if (latestRecord.price <= lowestHistoricalPrice) {
+        lowestRecentPrices.push({
+          productId,
+          productName: latestRecord.product.name,
+          brand: latestRecord.product.brand,
+          category: latestRecord.product.category,
+          marketId: latestRecord.market.id,
+          marketName,
+          price: latestRecord.price,
+          observedAt: latestRecord.observedAt,
+        });
+      }
+
+      // Maiores altas: preço mais recente subiu em relação ao anterior
       const increaseAmount = Number(
         (latestRecord.price - previousRecord.price).toFixed(2)
       );
+
       if (increaseAmount <= 0) continue;
 
       const increasePercentage =
@@ -120,7 +134,7 @@ export class GetUserHomeInsightsService {
         brand: latestRecord.product.brand,
         category: latestRecord.product.category,
         marketId: latestRecord.market.id,
-        marketName: latestRecord.market.displayName ?? latestRecord.market.name,
+        marketName,
         price: latestRecord.price,
         observedAt: latestRecord.observedAt,
         previousPrice: previousRecord.price,

@@ -28,6 +28,7 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
   const response = await fetch(url, {
     ...options,
     headers: {
+      'ngrok-skip-browser-warning': 'true',
       ...authHeaders(),
       ...(options.headers ?? {}),
     },

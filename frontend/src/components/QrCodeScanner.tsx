@@ -9,27 +9,42 @@ interface Props {
 
 export function QrCodeScanner({ onScan, onClose }: Props) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const stoppedRef = useRef(false);
+  const processingRef = useRef(false); // evita chamadas múltiplas
   const containerId = 'qr-scanner-container';
 
   useEffect(() => {
+    stoppedRef.current = false;
+    processingRef.current = false;
+
     const scanner = new Html5Qrcode(containerId, { verbose: false });
     scannerRef.current = scanner;
 
-    scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      (text) => {
-        cleanup().then(() => onScan(text));
-      },
-      undefined
-    ).catch(() => {
-      onClose();
-    });
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+    const onSuccess = async (text: string) => {
+      if (processingRef.current) return; // ignora leituras duplicadas
+      processingRef.current = true;
+      await cleanup();
+      onScan(text);
+    };
+
+    scanner.start({ facingMode: 'environment' }, config, onSuccess, undefined)
+      .catch(() => {
+        scanner.start({ facingMode: 'user' }, config, onSuccess, undefined)
+          .catch((err) => {
+            console.error('Scanner error:', err);
+            stoppedRef.current = true;
+            onClose();
+          });
+      });
 
     return () => { cleanup(); };
   }, []);
 
   async function cleanup() {
+    if (stoppedRef.current) return;
+    stoppedRef.current = true;
     const scanner = scannerRef.current;
     if (!scanner) return;
     scannerRef.current = null;
