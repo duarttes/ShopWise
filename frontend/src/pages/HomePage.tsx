@@ -16,6 +16,9 @@ import { QrCodeScanner } from '../components/QrCodeScanner';
 import { ReceiptPreviewCard } from '../components/ReceiptPreviewCard';
 import { Toast } from '../components/Toast';
 import { PriceHistoryDrawer } from '../components/PriceHistoryDrawer';
+import { MonthReceiptsDrawer } from '../components/MonthReceiptsDrawer';
+import { TopMarketDrawer } from '../components/TopMarketDrawer';
+import { MonthMarketsDrawer } from '../components/MonthMarketsDrawer';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -48,6 +51,10 @@ export function HomePage() {
   const [scanError, setScanError] = useState<string | null>(null);
   const [imported, setImported] = useState(false);
   const [importedMarket, setImportedMarket] = useState<{ id: string; name: string } | null>(null);
+
+  const [showMonthReceipts, setShowMonthReceipts] = useState(false);
+  const [showTopMarket, setShowTopMarket] = useState(false);
+  const [showMonthMarkets, setShowMonthMarkets] = useState(false);
 
   useEffect(() => {
     getMe()
@@ -134,12 +141,6 @@ export function HomePage() {
 
   const hasMonthData = (insights?.month?.totalSpent ?? 0) > 0 || (insights?.month?.receiptsCount ?? 0) > 0;
 
-  const stats = [
-    { label: 'este mês', value: `R$ ${insights?.month?.totalSpent?.toFixed(2) ?? '0.00'}`, color: 'var(--green-light)' },
-    { label: 'notas', value: String(insights?.month?.receiptsCount ?? 0), color: 'var(--text)' },
-    { label: 'mercados', value: String(insights?.month?.marketsCount ?? 0), color: 'var(--amber-light)' },
-  ];
-
   return (
     <div style={{ paddingBottom: 24 }}>
 
@@ -148,6 +149,28 @@ export function HomePage() {
           productId={selectedProduct.id}
           productName={selectedProduct.name}
           onClose={() => setSelectedProduct(null)}
+        />
+      )}
+
+      {showMonthReceipts && (
+        <MonthReceiptsDrawer
+          monthRef={insights?.month?.reference ?? ''}
+          onClose={() => setShowMonthReceipts(false)}
+        />
+      )}
+
+      {showTopMarket && insights?.topMarket && (
+        <TopMarketDrawer
+          marketId={insights.topMarket.id}
+          marketName={insights.topMarket.name}
+          onClose={() => setShowTopMarket(false)}
+        />
+      )}
+
+      {showMonthMarkets && (
+        <MonthMarketsDrawer
+          monthRef={insights?.month?.reference ?? ''}
+          onClose={() => setShowMonthMarkets(false)}
         />
       )}
 
@@ -174,20 +197,50 @@ export function HomePage() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, position: 'relative' }}>
-          {stats.map((item) => (
-            <div key={item.label} style={{
-              background: 'var(--stat-card-bg)',
-              borderRadius: 14,
-              padding: '12px',
-              border: '1px solid var(--stat-card-border)',
-              boxShadow: 'var(--stat-card-shadow)',
-            }}>
-              <div style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 900, fontSize: 16, color: item.color, lineHeight: 1, marginBottom: 4 }}>
-                {item.value}
-              </div>
-              <div style={{ fontSize: 10, color: 'var(--text-subtle)' }}>{item.label}</div>
+          {/* R$ este mês */}
+          <div
+            onClick={() => setShowMonthReceipts(true)}
+            style={{
+              background: 'var(--stat-card-bg)', borderRadius: 14, padding: '12px',
+              border: '1px solid var(--stat-card-border)', boxShadow: 'var(--stat-card-shadow)',
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ fontFamily: 'Nunito', fontWeight: 900, fontSize: 16, color: 'var(--green-light)', lineHeight: 1, marginBottom: 4 }}>
+              {`R$ ${insights?.month?.totalSpent?.toFixed(2) ?? '0.00'}`}
             </div>
-          ))}
+            <div style={{ fontSize: 10, color: 'var(--text-subtle)' }}>este mês</div>
+          </div>
+
+          {/* notas */}
+          <div
+            onClick={() => setShowMonthReceipts(true)}
+            style={{
+              background: 'var(--stat-card-bg)', borderRadius: 14, padding: '12px',
+              border: '1px solid var(--stat-card-border)', boxShadow: 'var(--stat-card-shadow)',
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ fontFamily: 'Nunito', fontWeight: 900, fontSize: 16, color: 'var(--text)', lineHeight: 1, marginBottom: 4 }}>
+              {String(insights?.month?.receiptsCount ?? 0)}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-subtle)' }}>notas</div>
+          </div>
+
+          {/* mercados */}
+          <div
+            onClick={() => setShowMonthMarkets(true)}
+            style={{
+              background: 'var(--stat-card-bg)', borderRadius: 14, padding: '12px',
+              border: '1px solid var(--stat-card-border)', boxShadow: 'var(--stat-card-shadow)',
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ fontFamily: 'Nunito', fontWeight: 900, fontSize: 16, color: 'var(--amber-light)', lineHeight: 1, marginBottom: 4 }}>
+              {String(insights?.month?.marketsCount ?? 0)}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-subtle)' }}>mercados</div>
+          </div>
         </div>
       </div>
 
@@ -248,7 +301,12 @@ export function HomePage() {
         {insights?.topMarket && (
           <div>
             <SectionLabel>Mercado favorito</SectionLabel>
-            <InsightCard label="mais frequentado" value={insights.topMarket.name}>
+            <InsightCard
+              label="mais frequentado"
+              value={insights.topMarket.name}
+              onClick={() => setShowTopMarket(true)}
+              style={{ cursor: 'pointer' }}
+            >
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                 {insights.topMarket.visits} visita(s) · R$ {insights.topMarket.totalSpent?.toFixed(2)}
               </div>

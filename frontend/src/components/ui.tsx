@@ -143,26 +143,30 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function InsightCard({ label, value, children }: {
+export function InsightCard({ label, value, children, onClick, style }: {
   label: string;
-  value?: string;
+  value: string;
   children?: React.ReactNode;
+  onClick?: () => void;
+  style?: React.CSSProperties;
 }) {
   return (
-    <div style={{
-      background: 'var(--insight-bg)',
-      border: '1px solid var(--insight-border)',
-      borderRadius: 12,
-      padding: '10px 14px',
-    }}>
-      <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--amber)', marginBottom: 3 }}>
+    <div
+      onClick={onClick}
+      style={{
+        background: 'var(--insight-bg)',
+        border: '1px solid var(--insight-border)',
+        borderRadius: 16,
+        padding: '14px 16px',
+        ...style,
+      }}
+    >
+      <div style={{ fontSize: 10, color: 'var(--amber)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>
         {label}
       </div>
-      {value && (
-        <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>
-          {value}
-        </div>
-      )}
+      <div style={{ fontFamily: 'Nunito', fontWeight: 800, fontSize: 18, color: 'var(--text)' }}>
+        {value}
+      </div>
       {children}
     </div>
   );

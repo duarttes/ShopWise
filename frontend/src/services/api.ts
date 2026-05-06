@@ -254,3 +254,15 @@ export async function getProductMarketComparison(productId: string) {
   if (!response.ok) throw new Error('Erro ao buscar comparação');
   return response.json();
 }
+
+export async function getReceipts(page = 1, limit = 20) {
+  const response = await apiFetch(`${API_URL}/receipts?page=${page}&limit=${limit}`);
+  if (!response.ok) throw new Error('Erro ao buscar notas');
+  return response.json();
+}
+
+export async function getReceiptById(id: string) {
+  const response = await apiFetch(`${API_URL}/receipts/${id}`);
+  if (!response.ok) throw new Error('Erro ao buscar nota');
+  return response.json();
+}
